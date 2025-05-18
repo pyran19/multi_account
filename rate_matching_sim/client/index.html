@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レート戦略シミュレーター</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .nav-tabs {
+            margin-bottom: 15px;
+        }
+        .strategy-card {
+            transition: all 0.3s ease;
+        }
+        .strategy-card:hover {
+            transform: translateY(-5px);
+        }
+        .positive {
+            color: #198754;
+        }
+        .negative {
+            color: #dc3545;
+        }
+        .code-editor {
+            font-family: monospace;
+            height: 200px;
+            width: 100%;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="mb-4 text-center">レート戦略シミュレーター</h1>
+        
+        <div class="row">
+            <!-- シミュレーションパラメータ -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">シミュレーションパラメータ</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs" id="simTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="single-tab" data-bs-toggle="tab" data-bs-target="#single" type="button" role="tab">単一戦略</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison" type="button" role="tab">戦略比較</button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="simTabsContent">
+                            <!-- 単一戦略シミュレーション -->
+                            <div class="tab-pane fade show active" id="single" role="tabpanel">
+                                <form id="simulation-form" class="mt-3">
+                                    <div class="mb-3">
+                                        <label for="strategy" class="form-label">戦略</label>
+                                        <select class="form-select" id="strategy" name="strategy">
+                                            <option value="HIGHEST_RATE">最も高いレートのアカウントを使用</option>
+                                            <option value="SECOND_HIGHEST_RATE">2番目に高いレートのアカウントを使用</option>
+                                            <option value="LOWEST_RATE">最も低いレートのアカウントを使用</option>
+                                            <option value="RANDOM">ランダムにアカウントを選択</option>
+                                            <option value="THRESHOLD_LOWEST">閾値以上で最も低いレートのアカウントを使用</option>
+                                            <option value="CLOSEST_TO_AVERAGE">平均レートに最も近いアカウントを使用</option>
+                                            <option value="FARTHEST_FROM_AVERAGE">平均レートから最も遠いアカウントを使用</option>
+                                            <option value="CUSTOM">カスタム戦略</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div id="threshold-container" class="mb-3 d-none">
+                                        <label for="threshold-rate" class="form-label">閾値レート</label>
+                                        <input type="number" class="form-control" id="threshold-rate" name="threshold_rate" value="1500">
+                                        <div class="form-text">この値以上のレートを持つアカウントの中から選択します</div>
+                                    </div>
+                                    
+                                    <div id="custom-strategy-container" class="mb-3 d-none">
+                                        <label for="custom-strategy-code" class="form-label">カスタム戦略コード</label>
+                                        <textarea class="code-editor" id="custom-strategy-code" name="custom_strategy_code">def select_account(accounts, total_matches_played):
+    """
+    カスタム戦略関数
+    
+    Args:
+        accounts: アカウントのリスト
+        total_matches_played: 現在までの総試合数
+        
+    Returns:
+        使用するアカウントのインデックス
+    """
+    # 例: 試合数が偶数なら最高レート、奇数なら最低レートのアカウントを使用
+    rates = [account.rate for account in accounts]
+    if total_matches_played % 2 == 0:
+        return np.argmax(rates)
+    else:
+        return np.argmin(rates)
+</textarea>
+                                        <div class="form-text">select_account関数を定義してください。npモジュールが利用可能です。</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="num-accounts" class="form-label">アカウント数</label>
+                                        <input type="number" class="form-control" id="num-accounts" name="num_accounts" value="3" min="1" max="10">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="initial-rate" class="form-label">初期レート</label>
+                                        <input type="number" class="form-control" id="initial-rate" name="initial_rate" value="1500" step="10">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="true-skill" class="form-label">適正レート</label>
+                                        <input type="number" class="form-control" id="true-skill" name="true_skill" value="1500" step="10">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="rate-change" class="form-label">レート変化量</label>
+                                        <input type="number" class="form-control" id="rate-change" name="rate_change" value="16" min="1" step="1">
+                                        <div class="form-text">1試合あたりのレート変化量</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="win-rate-slope" class="form-label">勝率のレート勾配</label>
+                                        <input type="number" class="form-control" id="win-rate-slope" name="win_rate_slope" value="0.01" min="0.001" max="0.1" step="0.001">
+                                        <div class="form-text">レート差1につき勝率が変化する割合</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="convergence-matches" class="form-label">収束試合数</label>
+                                        <input type="number" class="form-control" id="convergence-matches" name="convergence_matches" value="20" min="0" step="1">
+                                        <div class="form-text">適正レートへの収束に必要な試合数</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="max-matches" class="form-label">最大試合数</label>
+                                        <input type="number" class="form-control" id="max-matches" name="max_matches" value="100" min="1" step="1">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="num-simulations" class="form-label">シミュレーション回数</label>
+                                        <input type="number" class="form-control" id="num-simulations" name="num_simulations" value="100" min="1" max="1000" step="1">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="random-seed" class="form-label">乱数シード</label>
+                                        <input type="number" class="form-control" id="random-seed" name="random_seed" placeholder="オプション">
+                                        <div class="form-text">再現性のある結果を得るための乱数シード（省略可）</div>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary" id="run-simulation">シミュレーション実行</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- 戦略比較 -->
+                            <div class="tab-pane fade" id="comparison" role="tabpanel">
+                                <form id="comparison-form" class="mt-3">
+                                    <div class="mb-3">
+                                        <label for="comp-num-accounts" class="form-label">アカウント数</label>
+                                        <input type="number" class="form-control" id="comp-num-accounts" name="num_accounts" value="3" min="1" max="10">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-initial-rate" class="form-label">初期レート</label>
+                                        <input type="number" class="form-control" id="comp-initial-rate" name="initial_rate" value="1500" step="10">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-true-skill" class="form-label">適正レート</label>
+                                        <input type="number" class="form-control" id="comp-true-skill" name="true_skill" value="1500" step="10">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-rate-change" class="form-label">レート変化量</label>
+                                        <input type="number" class="form-control" id="comp-rate-change" name="rate_change" value="16" min="1" step="1">
+                                        <div class="form-text">1試合あたりのレート変化量</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-win-rate-slope" class="form-label">勝率のレート勾配</label>
+                                        <input type="number" class="form-control" id="comp-win-rate-slope" name="win_rate_slope" value="0.01" min="0.001" max="0.1" step="0.001">
+                                        <div class="form-text">レート差1につき勝率が変化する割合</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-convergence-matches" class="form-label">収束試合数</label>
+                                        <input type="number" class="form-control" id="comp-convergence-matches" name="convergence_matches" value="20" min="0" step="1">
+                                        <div class="form-text">適正レートへの収束に必要な試合数</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-max-matches" class="form-label">最大試合数</label>
+                                        <input type="number" class="form-control" id="comp-max-matches" name="max_matches" value="100" min="1" step="1">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-num-simulations" class="form-label">シミュレーション回数</label>
+                                        <input type="number" class="form-control" id="comp-num-simulations" name="num_simulations" value="100" min="1" max="1000" step="1">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="comp-random-seed" class="form-label">乱数シード</label>
+                                        <input type="number" class="form-control" id="comp-random-seed" name="random_seed" placeholder="オプション">
+                                        <div class="form-text">再現性のある結果を得るための乱数シード（省略可）</div>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary" id="run-comparison">戦略比較実行</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 結果表示 -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">シミュレーション結果</h5>
+                    </div>
+                    <div class="card-body" id="simulation-results">
+                        <div class="text-center text-muted">
+                            <p>シミュレーションを実行すると結果がここに表示されます</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 結果グラフ -->
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">結果グラフ</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="results-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 詳細結果 -->
+                <div class="card">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">詳細結果</h5>
+                    </div>
+                    <div class="card-body" id="detailed-results">
+                        <div class="text-center text-muted">
+                            <p>シミュレーションを実行すると詳細結果がここに表示されます</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
