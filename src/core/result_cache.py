@@ -18,12 +18,12 @@ FILE_TEMPLATE = "n{n}_acc{acc}.txt"
 # パブリック API
 # ---------------------------------------------
 
-def load_cache(n: int, accounts: int) -> Dict[Tuple[float, ...], Tuple[float, Optional[int]]]:
+def load_cache(n: int, accounts: int) -> Dict[Tuple[int, ...], Tuple[float, Optional[int]]]:
     """保存済み結果ファイルを読み込み、辞書を返す。
 
 
     戻り値の dict は
-        key   : ratings タプル (降順) - 浮動小数点レート
+        key   : ratings タプル (降順) - 整数レート
         value : (expectation, best_action)
     という形式。
 
@@ -33,7 +33,7 @@ def load_cache(n: int, accounts: int) -> Dict[Tuple[float, ...], Tuple[float, Op
     if not path.exists():
         return {}
 
-    results: Dict[Tuple[float, ...], Tuple[float, Optional[int]]] = {}
+    results: Dict[Tuple[int, ...], Tuple[float, Optional[int]]] = {}
 
     with path.open(mode="r", encoding="utf-8") as f:
         reader = csv.reader(_skip_header_lines(f, header_line_count=4))
