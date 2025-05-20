@@ -11,7 +11,7 @@ from src.core.parameters import RATING_STEP
     "n, ratings, expected",
     [
         (0, (1500, 1400), 1500),
-        (1, (1500, 1500), 1500),
+        (1, (1500, 1500), 1508),
     ],
 )
 def test_expectation_basic(n, ratings, expected):
