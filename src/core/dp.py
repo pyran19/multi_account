@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict
 
 from .state import State
 from .parameters import Parameters
+from .result_cache import save_result
 
 __all__ = [
     "expectation",
     "best_action",
 ]
 
+# キャッシュ計算データを保持するためのグローバル変数
+_calc_cache: Dict[Tuple[int, Tuple[int, ...]], Tuple[int, Optional[int]]] = {}
+
+CACHE_INTERVAL = 50
 
 # ---------------------------
 # メイン関数: 期待値
@@ -31,6 +36,7 @@ def _expectation_cached(n: int, ratings: Tuple[int, ...], params: Parameters) ->
 
     # アクション1: ここで終了する (stop) — 期待値は現在の最大レート
     best_value: int = state.best
+    best_idx: Optional[int] = None
 
     # アクション2: いずれかのアカウントで試合を行う
     for idx, int_rating in enumerate(state):
@@ -47,6 +53,14 @@ def _expectation_cached(n: int, ratings: Tuple[int, ...], params: Parameters) ->
 
         if exp > best_value:
             best_value = exp
+            best_idx = idx
+
+    # nがCACHE_INTERVALの倍数の場合、中間結果を保存
+    if n % CACHE_INTERVAL == 0:
+        # 最適アクションとともに結果を保存
+        save_result(n, len(ratings), ratings, best_value, best_idx)
+        # 計算キャッシュに保存
+        _calc_cache[(n, ratings)] = (best_value, best_idx)
 
     return best_value
 
@@ -75,6 +89,13 @@ def best_action(n: int, state: State, params: Parameters) -> Optional[int]:
         * `None` — 今すぐ終了するのが最適
         * `int`  — そのインデックスのアカウントで潜るのが最適
     """
+    # キャッシュにあれば、そこから取得
+    cache_key = (n, state.ratings)
+    if cache_key in _calc_cache:
+        _, best_idx = _calc_cache[cache_key]
+        return best_idx
+
+    # n=0の場合は何もできない
     if n == 0:
         return None  # もう打つ手なし
 
@@ -100,4 +121,6 @@ def best_action(n: int, state: State, params: Parameters) -> Optional[int]:
             best_value = expected_value
             best_idx = idx
 
+    # キャッシュに保存
+    _calc_cache[cache_key] = (best_value, best_idx)
     return best_idx 

@@ -173,7 +173,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# エディタ用設定
 *.code-workspace
+.cursorignore
 
 *.png
 *.jpg

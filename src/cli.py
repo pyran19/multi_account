@@ -119,7 +119,7 @@ def cmd_dp(args):
         exp = expectation(args.n, state, params)
         best_idx = best_action(args.n, state, params)
         # 保存
-        save_result(args.n, args.accounts, state.ratings, exp, best_idx)
+        #save_result(args.n, args.accounts, state.ratings, exp, best_idx)
 
     
     print(f"最終レート期待値: {params.int_to_float_rating(exp):.2f} (整数レート: {exp})")
