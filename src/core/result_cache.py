@@ -3,6 +3,8 @@ import csv
 from pathlib import Path
 from typing import Dict, Tuple, Optional, List
 
+from src.core.parameters import float_ratings_to_int, int_ratings_to_float, Parameters
+
 # ---------------------------------------------
 # 出力ファイル/ディレクトリ設定
 # ---------------------------------------------
@@ -19,8 +21,9 @@ FILE_TEMPLATE = "n{n}_acc{acc}.txt"
 def load_cache(n: int, accounts: int) -> Dict[Tuple[float, ...], Tuple[float, Optional[int]]]:
     """保存済み結果ファイルを読み込み、辞書を返す。
 
+
     戻り値の dict は
-        key   : ratings タプル (降順)
+        key   : ratings タプル (降順) - 浮動小数点レート
         value : (expectation, best_action)
     という形式。
 
@@ -38,8 +41,10 @@ def load_cache(n: int, accounts: int) -> Dict[Tuple[float, ...], Tuple[float, Op
             if not row:
                 continue  # 空行ガード
             # ratings * accounts, expectation, best_action
-            ratings = tuple(map(float, row[:accounts]))
+            ratings = tuple(map(int, row[:accounts]))
+            
             expectation_val = float(row[accounts])
+            
             best_action_val: Optional[int]
             if row[accounts + 1] == "" or row[accounts + 1].lower() == "none":
                 best_action_val = None
@@ -52,23 +57,24 @@ def load_cache(n: int, accounts: int) -> Dict[Tuple[float, ...], Tuple[float, Op
 def save_result(
     n: int,
     accounts: int,
-    ratings: Tuple[float, ...],
+    ratings: Tuple[int, ...],
     expectation_val: float,
     best_action_val: Optional[int],
 ) -> None:
     """計算結果を保存ファイルに追記 (新規/既存両対応)。
 
     同じ ratings が既に存在する場合はスキップ (上書きしない)。
+    
+    注意：内部では整数レートに変換して保存します。
     """
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUTPUT_DIR / FILE_TEMPLATE.format(n=n, acc=accounts)
 
+    
     # 既存の結果を読み込み (存在しない場合は空辞書)
-    cache = load_cache(n, accounts)
-    if ratings in cache:
-        # 既に登録済み
-        return
-
+    # 整数レートで保存されているため、整数レートベースでキーを検索する必要がある
+    # キャッシュが実数レートで存在するかは検査しない（新旧混在あり得る）
+    
     # ファイルが無い場合はヘッダを書き込む
     new_file = not path.exists()
 

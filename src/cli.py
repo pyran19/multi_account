@@ -66,7 +66,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_initial_state(args) -> State:
+def get_initial_state(args, params: Parameters) -> State:
     """コマンドライン引数から初期状態を作成する。"""
     if args.initial:
         if len(args.initial) != args.accounts:
@@ -80,7 +80,9 @@ def get_initial_state(args) -> State:
         # デフォルトは全て同じレート
         initial_ratings = [args.mu] * args.accounts
 
-    return State.from_iterable(initial_ratings)
+    int_initial_ratings = [params.float_to_int_rating(r) for r in initial_ratings]
+
+    return State.from_iterable(int_initial_ratings)
 
 
 def get_parameters(args) -> Parameters:
@@ -94,32 +96,33 @@ def get_parameters(args) -> Parameters:
 
 def cmd_dp(args):
     """DPコマンドを実行する。"""
-    state = get_initial_state(args)
     params = get_parameters(args)
+    state = get_initial_state(args, params)
 
     # パラメータ表示
     print(f"残り試合数: {args.n}")
     print(f"アカウント数: {args.accounts}")
-    print(f"初期レート: {list(state.ratings)}")
+    print(f"初期レート（整数）: {list(state.ratings)}")
+    print(f"初期レート: {list([params.int_to_float_rating(r) for r in state.ratings])}")
     print(f"レート変動幅: {params.rating_step}")
     print(f"勝率係数 k: {params.k_coeff}")
     print(f"適正レート μ: {params.mu}")
     print()
 
     # 期待値計算
-    ratings_tuple = tuple(sorted(state.ratings, reverse=True))
     cache = load_cache(args.n, args.accounts)
 
-    if ratings_tuple in cache:
-        exp, best_idx = cache[ratings_tuple]
+    if state.ratings in cache:
+        exp, best_idx = cache[state.ratings]
         print("[cache] 既存の計算結果を使用します。")
     else:
         exp = expectation(args.n, state, params)
         best_idx = best_action(args.n, state, params)
         # 保存
-        save_result(args.n, args.accounts, ratings_tuple, exp, best_idx)
+        save_result(args.n, args.accounts, state.ratings, exp, best_idx)
 
-    print(f"最終レート期待値: {exp:.2f}")
+    
+    print(f"最終レート期待値: {params.int_to_float_rating(exp):.2f} (整数レート: {exp})")
     if best_idx is None:
         print("最適アクション: 今すぐ終了")
     else:
@@ -128,8 +131,8 @@ def cmd_dp(args):
 
 def cmd_sim(args):
     """シミュレーションコマンドを実行する。"""
-    state = get_initial_state(args)
     params = get_parameters(args)
+    state = get_initial_state(args, params)
 
     # パラメータ表示
     print(f"最大試合数: {args.n}")
