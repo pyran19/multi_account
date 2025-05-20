@@ -7,12 +7,13 @@ import math
 
 import numpy as np
 
-from src.core.dp import expectation
+from src.core.dp import expectation, best_action
 from src.core.parameters import Parameters
 from src.core.state import State
 from src.simulator.policy import OptimalPolicy, RandomPolicy, FixedPolicy, GreedyPolicy
 from src.simulator.simulation import Simulator, compare_policies
 from src.simulator.visualization import save_plots
+from src.core.result_cache import load_cache, save_result
 
 
 def parse_args():
@@ -106,8 +107,23 @@ def cmd_dp(args):
     print()
 
     # 期待値計算
-    exp = expectation(args.n, state, params)
+    ratings_tuple = tuple(sorted(state.ratings, reverse=True))
+    cache = load_cache(args.n, args.accounts)
+
+    if ratings_tuple in cache:
+        exp, best_idx = cache[ratings_tuple]
+        print("[cache] 既存の計算結果を使用します。")
+    else:
+        exp = expectation(args.n, state, params)
+        best_idx = best_action(args.n, state, params)
+        # 保存
+        save_result(args.n, args.accounts, ratings_tuple, exp, best_idx)
+
     print(f"最終レート期待値: {exp:.2f}")
+    if best_idx is None:
+        print("最適アクション: 今すぐ終了")
+    else:
+        print(f"最適アクション: アカウント {best_idx} で潜る")
 
 
 def cmd_sim(args):
