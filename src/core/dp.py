@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import Tuple, Optional
 
 from .state import State
-from .parameters import RATING_STEP, win_prob
+from .parameters import Parameters
 
 __all__ = [
     "expectation",
@@ -18,7 +18,7 @@ __all__ = [
 # ---------------------------
 
 @lru_cache(maxsize=None)
-def _expectation_cached(n: int, ratings: Tuple[float, ...]) -> float:
+def _expectation_cached(n: int, ratings: Tuple[float, ...], params: Parameters) -> float:
     """内部用キャッシュ付き期待値計算関数。"""
     state = State(ratings)
 
@@ -31,14 +31,14 @@ def _expectation_cached(n: int, ratings: Tuple[float, ...]) -> float:
 
     # アクション2: いずれかのアカウントで試合を行う
     for idx, rating in enumerate(state):
-        p = win_prob(rating)
+        p = params.win_prob(rating)
         # 勝利時・敗北時の次状態
-        next_win = state.after_match(idx, won=True, step=RATING_STEP)
-        next_lose = state.after_match(idx, won=False, step=RATING_STEP)
+        next_win = state.after_match(idx, won=True, step=params.rating_step)
+        next_lose = state.after_match(idx, won=False, step=params.rating_step)
 
-        exp = p * _expectation_cached(n - 1, next_win.ratings) + (
+        exp = p * _expectation_cached(n - 1, next_win.ratings, params) + (
             1.0 - p
-        ) * _expectation_cached(n - 1, next_lose.ratings)
+        ) * _expectation_cached(n - 1, next_lose.ratings, params)
 
         if exp > best_value:
             best_value = exp
@@ -46,17 +46,17 @@ def _expectation_cached(n: int, ratings: Tuple[float, ...]) -> float:
     return best_value
 
 
-def expectation(n: int, state: State | Tuple[float, ...]) -> float:  # noqa: D401
+def expectation(n: int, state: State | Tuple[float, ...], params: Parameters) -> float:  # noqa: D401
     """公開 API: 指定状態・残り試合数での最終レート期待値を返す。"""
     ratings = state.ratings if isinstance(state, State) else tuple(sorted(state, reverse=True))
-    return _expectation_cached(n, ratings)
+    return _expectation_cached(n, ratings, params)
 
 
 # ---------------------------
 # 最適アクション
 # ---------------------------
 
-def best_action(n: int, state: State) -> Optional[int]:
+def best_action(n: int, state: State, params: Parameters) -> Optional[int]:
     """最適アクションを返す。
 
     戻り値:
@@ -70,11 +70,11 @@ def best_action(n: int, state: State) -> Optional[int]:
     best_idx: Optional[int] = None
 
     for idx, rating in enumerate(state):
-        p = win_prob(rating)
-        next_win = state.after_match(idx, won=True)
-        next_lose = state.after_match(idx, won=False)
-        exp = p * expectation(n - 1, next_win) + (1 - p) * expectation(
-            n - 1, next_lose
+        p = params.win_prob(rating)
+        next_win = state.after_match(idx, won=True, step=params.rating_step)
+        next_lose = state.after_match(idx, won=False, step=params.rating_step)
+        exp = p * expectation(n - 1, next_win, params) + (1 - p) * expectation(
+            n - 1, next_lose, params
         )
         if exp > best_value:
             best_value = exp

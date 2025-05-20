@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 
 __all__ = [
     "RATING_STEP",
@@ -18,9 +19,11 @@ __all__ = [
 # 基本定数
 # ---------------------------
 
+
+
 RATING_STEP: int = 16  # 1 試合あたりのレート変動幅 d
-K_COEFF: float = 0.04  # 勝率の線形近似で使う傾き k (デフォルト 0.04 レート差→勝率±0.5)
-MU: int = 1600  # プレイヤーの適正レート（中央値）
+K_COEFF: float = math.log(10) / 1600  # 勝率の線形近似で使う傾き k (デフォルト ln10/1600 レート差→勝率±0.5)
+MU: int = 1500  # プレイヤーの適正レート（中央値）
 
 # ---------------------------
 # 勝率関数

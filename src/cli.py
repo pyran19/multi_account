@@ -3,6 +3,7 @@ import argparse
 import os
 import sys
 from typing import List
+import math
 
 import numpy as np
 
@@ -58,7 +59,7 @@ def parse_args():
     # パラメータオプション（共通）
     for p in [dp_parser, sim_parser]:
         p.add_argument("--rating-step", type=int, default=16, help="1試合あたりのレート変動幅")
-        p.add_argument("--k-coeff", type=float, default=1.0 / 800, help="勝率の線形近似で使う傾き")
+        p.add_argument("--k-coeff", type=float, default=math.log(10) / 1600, help="勝率の線形近似で使う傾き")
         p.add_argument("--mu", type=float, default=1500, help="プレイヤーの適正レート")
 
     return parser.parse_args()
@@ -105,7 +106,7 @@ def cmd_dp(args):
     print()
 
     # 期待値計算
-    exp = expectation(args.n, state)
+    exp = expectation(args.n, state, params)
     print(f"最終レート期待値: {exp:.2f}")
 
 
@@ -127,19 +128,20 @@ def cmd_sim(args):
     # ポリシー選択
     if args.policy == "all":
         policies = [
-            OptimalPolicy(),
-            RandomPolicy(),
-            FixedPolicy(account_idx=args.fixed_idx),
-            GreedyPolicy(),
+            #OptimalPolicy(params),
+            RandomPolicy(params),
+            FixedPolicy(params, account_idx=0),
+            FixedPolicy(params, account_idx=1),
+            GreedyPolicy(params),
         ]
     elif args.policy == "optimal":
-        policies = [OptimalPolicy()]
+        policies = [OptimalPolicy(params)]
     elif args.policy == "random":
-        policies = [RandomPolicy()]
+        policies = [RandomPolicy(params)]
     elif args.policy == "fixed":
-        policies = [FixedPolicy(account_idx=args.fixed_idx)]
+        policies = [FixedPolicy(params, account_idx=args.fixed_idx)]
     elif args.policy == "greedy":
-        policies = [GreedyPolicy()]
+        policies = [GreedyPolicy(params)]
     else:
         print(f"Error: 不明なポリシー '{args.policy}'", file=sys.stderr)
         sys.exit(1)
@@ -168,7 +170,7 @@ def cmd_sim(args):
             )
             
             # グラフ保存
-            image_files = save_plots(results, prefix=prefix)
+            image_files = save_plots(results, params, prefix=prefix)
             print(f"グラフを保存しました:")
             for f in image_files:
                 print(f"  - {f}")

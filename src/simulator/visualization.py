@@ -6,9 +6,9 @@ import numpy as np
 from typing import List, Optional, Tuple
 
 from src.simulator.simulation import SimulationResult
+from src.core.parameters import Parameters
 
-
-def plot_rating_distributions(results: List[SimulationResult], title: Optional[str] = None):
+def plot_rating_distributions(results: List[SimulationResult], params: Parameters, title: Optional[str] = None):
     """複数のポリシーの最終レート分布をヒストグラムで表示する。
 
     Args:
@@ -36,7 +36,7 @@ def plot_rating_distributions(results: List[SimulationResult], title: Optional[s
     return plt
 
 
-def plot_rating_comparison(results: List[SimulationResult], title: Optional[str] = None):
+def plot_rating_comparison(results: List[SimulationResult], params: Parameters, title: Optional[str] = None):
     """複数のポリシーの最終レート平均値と標準偏差を棒グラフで比較する。
 
     Args:
@@ -61,6 +61,7 @@ def plot_rating_comparison(results: List[SimulationResult], title: Optional[str]
     plt.ylabel("Final Rating")
     plt.title(title or "Policy Comparison")
     plt.xticks(x, policies)
+    plt.ylim(params.mu - 100, max(means) + 100)
     plt.grid(True, alpha=0.3, axis="y")
     
     # 平均値を表示
@@ -70,11 +71,12 @@ def plot_rating_comparison(results: List[SimulationResult], title: Optional[str]
     return plt
 
 
-def save_plots(results: List[SimulationResult], prefix: str = "sim_result"):
+def save_plots(results: List[SimulationResult], params: Parameters, prefix: str = "sim_result"):
     """シミュレーション結果のグラフを保存する。
 
     Args:
         results: シミュレーション結果のリスト
+        params:  シミュレーションのパラメータ
         prefix: 保存するファイル名のプレフィックス
     """
     # 初期レートと最大試合数の情報を取得（全結果で共通）
@@ -85,11 +87,11 @@ def save_plots(results: List[SimulationResult], prefix: str = "sim_result"):
     title = f"Initial: {initial_ratings}, Max Matches: {max_matches}"
     
     # 分布プロット
-    dist_plot = plot_rating_distributions(results, title=f"Rating Distribution\n{title}")
+    dist_plot = plot_rating_distributions(results, params, title=f"Rating Distribution\n{title}")
     dist_plot.savefig(f"{prefix}_distribution.png", dpi=300, bbox_inches="tight")
     
     # 比較プロット
-    comp_plot = plot_rating_comparison(results, title=f"Policy Comparison\n{title}")
+    comp_plot = plot_rating_comparison(results, params, title=f"Policy Comparison\n{title}")
     comp_plot.savefig(f"{prefix}_comparison.png", dpi=300, bbox_inches="tight")
     
     plt.close("all")
