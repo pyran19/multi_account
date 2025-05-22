@@ -26,7 +26,7 @@ CACHE_INTERVAL = 50
 # ---------------------------
 
 @lru_cache(maxsize=None)
-def _expectation_cached(n: int, ratings: Tuple[int, ...], params: Parameters) -> int:
+def _expectation_cached(n: int, ratings: Tuple[int, ...], params: Parameters) -> float:
     """内部用キャッシュ付き期待値計算関数。
     
     注意: 整数レートベースで計算し、整数レートの期待値を返す
@@ -76,7 +76,7 @@ def _expectation_cached(n: int, ratings: Tuple[int, ...], params: Parameters) ->
     return best_value
 
 
-def expectation(n: int, state: State | Tuple[float, ...], params: Parameters) -> float:  # noqa: D401
+def expectation(n: int, state: State | Tuple[int, ...], params: Parameters) -> float:  # noqa: D401
     """公開 API: 指定状態・残り試合数での最終レート期待値を返す。
     """
     global _loaded_caches
@@ -92,9 +92,9 @@ def expectation(n: int, state: State | Tuple[float, ...], params: Parameters) ->
         # 利用可能なキャッシュを全てロード
         _loaded_caches = load_available_caches(accounts)
         
-    # 入力が実数レートタプルの場合はStateに変換
+    # 入力が整数レートタプルの場合はStateに変換
     if not isinstance(state, State):
-        state = State.from_iterable(state, is_float=True, mu=params.mu, step=params.rating_step)
+        state = State.from_iterable(state)
     
     # 内部の_expectation_cachedは整数レートベースで計算
     int_exp = _expectation_cached(n, state.ratings, params)

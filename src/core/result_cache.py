@@ -4,7 +4,6 @@ from pathlib import Path
 import glob
 from typing import Dict, Tuple, Optional, List, Set
 
-from src.core.parameters import float_ratings_to_int, int_ratings_to_float, Parameters
 
 # ---------------------------------------------
 # 出力ファイル/ディレクトリ設定

@@ -2,10 +2,10 @@
 import pytest
 import random
 
-from src.core.state import State
-from src.core.parameters import Parameters
-from src.simulator.policy import OptimalPolicy, RandomPolicy, FixedPolicy, GreedyPolicy
-from src.simulator.simulation import Simulator, compare_policies
+from core.state import State
+from core.parameters import Parameters
+from simulator.policy import OptimalPolicy, RandomPolicy, FixedPolicy, GreedyPolicy
+from simulator.simulation import Simulator, compare_policies
 
 
 def test_policy_selection():
@@ -14,7 +14,7 @@ def test_policy_selection():
     params = Parameters()
     
     # テスト用の状態を作成（実数レート→整数レートに変換）
-    state = State.from_iterable([1500, 1400, 1300], is_float=True, mu=params.mu, step=params.rating_step)
+    state = State.from_iterable([0,1,2])
     remaining_matches = 10
 
     # 最適ポリシー（実際の選択はDPに依存するため、Noneでないことだけ確認）
@@ -69,7 +69,7 @@ def test_simulator_multiple_episodes():
     params = Parameters()
 
     # テスト用の状態とポリシーを作成
-    state = State.from_iterable([1500, 1500])
+    state = State.from_iterable([0,0])
     max_matches = 5
     episodes = 10
     policy = FixedPolicy(params, account_idx=0)
@@ -80,7 +80,7 @@ def test_simulator_multiple_episodes():
 
     # 結果の検証
     assert len(result.ratings) == episodes
-    assert result.policy_name == "FixedPolicy"
+    assert result.policy_name == "FixedPolicy (ranking=1)"
     assert result.initial_ratings == [1500, 1500]
     assert result.max_matches == max_matches
 

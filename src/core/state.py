@@ -22,7 +22,7 @@ class State:
     # ファクトリ
     # ---------------------------
     @classmethod
-    def from_iterable(cls, ratings: Iterable[Union[float, int]]) -> "State":
+    def from_iterable(cls, ratings: Iterable[int]) -> "State":
         """Iterable から生成し、内部で降順ソートする。
         
         Args:
