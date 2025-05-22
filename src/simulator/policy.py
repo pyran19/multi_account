@@ -23,7 +23,7 @@ class Policy(ABC):
         """現在の状態と残り試合数から、次にプレイするアカウントのインデックスを選択する。
 
         Args:
-            state: 現在のレート状態
+            state: 現在のレート状態（整数レート形式）
             remaining_matches: 残り試合数
 
         Returns:
@@ -46,7 +46,7 @@ class OptimalPolicy(Policy):
         """最適なアカウント選択を行う。
 
         Args:
-            state: 現在のレート状態
+            state: 現在のレート状態（整数レート形式）
             remaining_matches: 残り試合数
 
         Returns:
@@ -71,7 +71,7 @@ class RandomPolicy(Policy):
         """ランダムにアカウントを選択する。
 
         Args:
-            state: 現在のレート状態
+            state: 現在のレート状態（整数レート形式）
             remaining_matches: 残り試合数
 
         Returns:
@@ -104,7 +104,7 @@ class FixedPolicy(Policy):
         """常に同じアカウントを選択する。
 
         Args:
-            state: 現在のレート状態
+            state: 現在のレート状態（整数レート形式）
             remaining_matches: 残り試合数
 
         Returns:
@@ -136,7 +136,7 @@ class GreedyPolicy(Policy):
         """最も低いレートのアカウントを選択する。
 
         Args:
-            state: 現在のレート状態
+            state: 現在のレート状態（整数レート形式）
             remaining_matches: 残り試合数
 
         Returns:
