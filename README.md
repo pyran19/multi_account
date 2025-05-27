@@ -117,3 +117,157 @@ i = round((r - μ) / d)
 - 内部計算と永続化（キャッシュ）では整数レートを使用
 - 変換関数は `src/core/parameters.py` で定義
 
+---
+
+## 7. MCP Server for AI Integration
+
+### Purpose
+The MCP (Monte Carlo Planner) Server provides an HTTP interface to run Dynamic Programming (DP) calculations and Monte Carlo simulations. This allows external programs, such as AI agents or other planning tools, to leverage the core logic of this repository without direct Python integration.
+
+### Starting the Server
+To start the server, run the following command from the root of the repository:
+```bash
+python -m src.mcp_server
+```
+By default, the server listens on port `8080`. You can specify a different port using the `--port` argument (though this CLI argument is not explicitly implemented in the current `src.mcp_server.py`, the code structure allows for it to be added if needed; currently, it uses the `PORT` variable). For example, to run on port 8000 if `PORT` was changed or if argument parsing was added:
+```bash
+# Assuming PORT variable in mcp_server.py is changed or --port is implemented
+# python -m src.mcp_server --port 8000
+```
+Currently, to change the port, you would need to modify the `PORT` variable in `src/mcp_server.py`.
+
+### Endpoint
+The server exposes a single endpoint for all operations:
+*   **`POST /mcp`**
+
+### Request Format
+All requests must be HTTP POST requests with a JSON body and `Content-Type: application/json`.
+
+The JSON body must contain a `command` field specifying the operation ("dp" or "sim") and other parameters based on the command.
+
+**Common Parameters (for both `dp` and `sim`):**
+*   `command` (string, required): The command to execute. Must be `"dp"` or `"sim"`.
+*   `n` (integer, required): The number of remaining matches. Must be a non-negative integer.
+*   `accounts` (integer, optional, default: `2`): The number of accounts. Must be a positive integer.
+*   `initial` (list of numbers, optional, default: `null` which results in `mu` for all accounts): A list of initial float ratings for each account. If provided, its length must match `accounts`.
+*   `rating_step` (number, optional, default: `16`): The rating change per match (e.g., 16 points).
+*   `k_coeff` (number, optional, default: `math.log(10) / 1600` ≈ `0.001439`): The k-coefficient for the linear win probability approximation.
+*   `mu` (number, optional, default: `1500.0`): The player's true/mean rating.
+
+**Parameters specific to the `sim` command:**
+*   `episodes` (integer, optional, default: `1000`): The number of simulation episodes to run. Must be a positive integer.
+*   `policy` (string, optional, default: `"all"`): The policy to use for simulation. Valid values include `"optimal"`, `"random"`, `"fixed"`, `"greedy"`, `"all"`.
+*   `fixed_idx` (integer, optional, default: `0`): The account index to use if `policy` is `"fixed"`. Must be a non-negative integer and less than `accounts`.
+*   `visualize` (boolean, optional, default: `false`): Whether to generate and save visualization plots. If `true`, `matplotlib` must be installed.
+*   `output_dir` (string, optional, default: `.`): The directory where visualization plots will be saved if `visualize` is `true`.
+
+### Response Format
+
+**Success Response (common structure):**
+```json
+{
+  "status": "success",
+  "command": "<command_executed>",
+  "results": {
+    // Command-specific results go here
+  }
+}
+```
+
+**For `dp` command, `results` will contain:**
+```json
+{
+  "expected_value_int": 1510, // Integer representation of expected max rating
+  "best_action_account_index": 0, // Index of account to play, or null to stop
+  "using_cache": false,
+  "initial_ratings_int": [0, 0], // Integer ratings
+  "initial_ratings_float": [1500.0, 1500.0] // Float ratings
+}
+```
+
+**For `sim` command, `results` will contain:**
+```json
+{
+  "simulation_results": [ /* list of simulation result objects/dicts */ ],
+  "visualization_files": [ /* list of paths to saved plot images if visualize=true */ ],
+  "initial_ratings_int": [0, 0],
+  "initial_ratings_float": [1500.0, 1500.0],
+  "error": "Optional error message if visualization failed, e.g., matplotlib not found"
+}
+```
+If visualization produces an error (e.g., `matplotlib` not found when `visualize: true`), the main response status will still be `200 OK` and `status: "success"`, but the `results.error` field will contain the error message, and the top-level response will also include `warning_visualization: "<error_message>"`.
+
+**Error Response (e.g., HTTP 400 for bad request, HTTP 500 for server error):**
+```json
+{
+  "status": "error",
+  "message": "<Detailed error message>"
+}
+```
+
+### Example Usage
+
+**1. DP Calculation Request:**
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{
+        "command": "dp",
+        "n": 10,
+        "accounts": 2,
+        "initial": [1500.0, 1520.0],
+        "mu": 1500.0,
+        "rating_step": 16,
+        "k_coeff": 0.001439
+      }' \
+  http://localhost:8080/mcp
+```
+
+**Expected DP Response (example):**
+```json
+{
+  "status": "success",
+  "command": "dp",
+  "results": {
+    "expected_value_int": 10, 
+    "best_action_account_index": 1,
+    "using_cache": false,
+    "initial_ratings_int": [0, 1], 
+    "initial_ratings_float": [1500.0, 1516.0] 
+  }
+}
+```
+*(Note: `expected_value_int` and `initial_ratings_int` are based on the integer representation relative to `mu` and `rating_step`. The example values are illustrative.)*
+
+**2. Simulation Request:**
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -d '{
+        "command": "sim",
+        "n": 20,
+        "accounts": 2,
+        "initial": [1480.0, 1500.0],
+        "episodes": 100,
+        "policy": "greedy",
+        "visualize": false
+      }' \
+  http://localhost:8080/mcp
+```
+
+**Expected Simulation Response (example):**
+```json
+{
+  "status": "success",
+  "command": "sim",
+  "results": {
+    "simulation_results": [
+      { /* result structure for GreedyPolicy */ } 
+      // ... (structure depends on SimulationResult details)
+    ],
+    "visualization_files": [],
+    "initial_ratings_int": [-1, 0], 
+    "initial_ratings_float": [1484.0, 1500.0]
+  }
+}
+```
+*(Note: `initial_ratings_float` in response might be slightly different from input due to internal float to int conversion and back, if input is not a multiple of `rating_step` from `mu`.)*
+

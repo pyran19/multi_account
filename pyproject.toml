@@ -1,0 +1,19 @@
+[project]
+name = "multi-account"
+version = "0.1.0"
+description = "Multi-account Pokemon battle simulator with MCP server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.0.0",
+    "numpy",
+    "matplotlib",
+]
+
+[project.scripts]
+multi-account-mcp = "src.mcp_server:main"
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
