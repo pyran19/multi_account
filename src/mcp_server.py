@@ -1,150 +1,245 @@
-import http.server
-import socketserver
+"""Multi-account Pokemon battle simulator MCP server."""
+
+import asyncio
 import json
-import math
-from src.core.parameters import Parameters # For type hint if needed
-from src.core.state import State # For type hint if needed
+import sys
+from typing import Any, Dict, List, Optional
+
+from mcp.server import Server
+from mcp.server.models import InitializationOptions
+from mcp.server.stdio import stdio_server
+from mcp.types import (
+    Resource,
+    Tool,
+    TextContent,
+    ImageContent,
+    EmbeddedResource,
+    LoggingLevel
+)
+
+from src.core.parameters import Parameters
+from src.core.state import State
 from src.cli import get_parameters, get_initial_state, perform_dp_calculation, perform_simulation
 
-PORT = 8080
-MCP_PATH = "/mcp"
+# MCPサーバーのインスタンスを作成
+server = Server("multi-account-simulator")
 
-class MCPServerHandler(http.server.SimpleHTTPRequestHandler):
-    
-    def _send_json_response(self, status_code: int, data: dict):
-        self.send_response(status_code)
-        self.send_header("Content-type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode('utf-8'))
-
-    def do_POST(self):
-        if self.path != MCP_PATH:
-            self.send_error(404, "Not Found")
-            return
-
-        try:
-            content_length = int(self.headers['Content-Length'])
-            post_data_bytes = self.rfile.read(content_length)
-            post_data_str = post_data_bytes.decode('utf-8')
-            payload = json.loads(post_data_str)
-        except (TypeError, ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
-            message = "Invalid request: "
-            if isinstance(e, json.JSONDecodeError): message = "Invalid JSON format."
-            elif isinstance(e, UnicodeDecodeError): message = "Invalid request encoding. Expected UTF-8."
-            elif isinstance(e, (TypeError, ValueError)): message = f"Content-Length header issue: {e}"
-            self._send_json_response(400, {"status": "error", "message": message})
-            return
-
-        command = payload.get("command")
-        if not command:
-            self._send_json_response(400, {"status": "error", "message": "Missing 'command' field in request."})
-            return
-        
-        if command not in ["dp", "sim"]:
-            self._send_json_response(400, {"status": "error", "message": f"Invalid command '{command}'. Must be 'dp' or 'sim'."})
-            return
-
-        try:
-            # Parameter extraction and defaults
-            n_matches = payload.get("n")
-            if n_matches is None: # n is required for both dp and sim
-                 self._send_json_response(400, {"status": "error", "message": "Missing required parameter 'n' (number of matches)."})
-                 return
-            if not isinstance(n_matches, int) or n_matches < 0:
-                 self._send_json_response(400, {"status": "error", "message": "'n' must be a non-negative integer."})
-                 return
-
-            num_accounts = payload.get("accounts", 2) # Default from cli.py
-            if not isinstance(num_accounts, int) or num_accounts <=0:
-                self._send_json_response(400, {"status": "error", "message": "'accounts' must be a positive integer."})
-                return
-
-            initial_ratings_float = payload.get("initial") # Default is None
-            if initial_ratings_float is not None:
-                if not isinstance(initial_ratings_float, list) or not all(isinstance(r, (int, float)) for r in initial_ratings_float):
-                    self._send_json_response(400, {"status": "error", "message": "'initial' must be a list of numbers."})
-                    return
-            
-            param_data = {
-                "rating_step": payload.get("rating_step", 16),
-                "k_coeff": payload.get("k_coeff", math.log(10) / 1600),
-                "mu": payload.get("mu", 1500.0)
+@server.list_tools()
+async def handle_list_tools() -> List[Tool]:
+    """利用可能なツールのリストを返す。"""
+    return [
+        Tool(
+            name="calculate_dp",
+            description="動的プログラミングを使って最適戦略を計算します",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "n_matches": {
+                        "type": "integer",
+                        "description": "試合数",
+                        "minimum": 0
+                    },
+                    "accounts": {
+                        "type": "integer",
+                        "description": "アカウント数（デフォルト: 2）",
+                        "minimum": 1,
+                        "default": 2
+                    },
+                    "initial_ratings": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "初期レーティング（省略時は全て1500）"
+                    },
+                    "rating_step": {
+                        "type": "number",
+                        "description": "レーティングステップ（デフォルト: 16）",
+                        "default": 16
+                    },
+                    "k_coeff": {
+                        "type": "number",
+                        "description": "Kファクター係数（デフォルト: log(10)/1600）"
+                    },
+                    "mu": {
+                        "type": "number",
+                        "description": "平均レーティング（デフォルト: 1500）",
+                        "default": 1500.0
+                    }
+                },
+                "required": ["n_matches"]
             }
-            # Type check for core params
-            for p_name, p_val in param_data.items():
-                 if not isinstance(p_val, (int, float)):
-                    self._send_json_response(400, {"status": "error", "message": f"Parameter '{p_name}' must be a number."})
-                    return
+        ),
+        Tool(
+            name="run_simulation",
+            description="複数のポリシーでシミュレーションを実行します",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "n_matches": {
+                        "type": "integer",
+                        "description": "試合数",
+                        "minimum": 0
+                    },
+                    "accounts": {
+                        "type": "integer",
+                        "description": "アカウント数（デフォルト: 2）",
+                        "minimum": 1,
+                        "default": 2
+                    },
+                    "initial_ratings": {
+                        "type": "array",
+                        "items": {"type": "number"},
+                        "description": "初期レーティング（省略時は全て1500）"
+                    },
+                    "episodes": {
+                        "type": "integer",
+                        "description": "エピソード数（デフォルト: 1000）",
+                        "minimum": 1,
+                        "default": 1000
+                    },
+                    "policy": {
+                        "type": "string",
+                        "description": "ポリシー名（optimal, random, fixed, greedy, all）",
+                        "default": "all"
+                    },
+                    "fixed_idx": {
+                        "type": "integer",
+                        "description": "固定ポリシーのアカウントインデックス",
+                        "minimum": 0,
+                        "default": 0
+                    },
+                    "rating_step": {
+                        "type": "number",
+                        "description": "レーティングステップ（デフォルト: 16）",
+                        "default": 16
+                    },
+                    "k_coeff": {
+                        "type": "number",
+                        "description": "Kファクター係数（デフォルト: log(10)/1600）"
+                    },
+                    "mu": {
+                        "type": "number",
+                        "description": "平均レーティング（デフォルト: 1500）",
+                        "default": 1500.0
+                    }
+                },
+                "required": ["n_matches"]
+            }
+        ),
 
+    ]
 
-            core_params = get_parameters(param_data)
-            initial_state = get_initial_state(num_accounts, initial_ratings_float, core_params)
+@server.call_tool()
+async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+    """ツールの実行を処理する。"""
+    try:
+        if name == "calculate_dp":
+            return await handle_calculate_dp(arguments)
+        elif name == "run_simulation":
+            return await handle_run_simulation(arguments)
 
-            if command == "dp":
-                results = perform_dp_calculation(n_matches, initial_state, core_params, num_accounts)
-                # Structure: {'expected_value_int': ..., 'best_action_account_index': ..., ...}
-                self._send_json_response(200, {"status": "success", "command": "dp", "results": results})
-            
-            elif command == "sim":
-                episodes = payload.get("episodes", 1000)
-                policy_name = payload.get("policy", "all")
-                fixed_idx = payload.get("fixed_idx", 0)
-                visualize = payload.get("visualize", False) # Default to False for server
-                output_dir = payload.get("output_dir", ".") # Server might want to control this
-
-                # Type checks for sim-specific params
-                if not isinstance(episodes, int) or episodes <=0:
-                    self._send_json_response(400, {"status": "error", "message": "'episodes' must be a positive integer."})
-                    return
-                if not isinstance(policy_name, str):
-                     self._send_json_response(400, {"status": "error", "message": "'policy' must be a string."})
-                     return
-                if not isinstance(fixed_idx, int) or fixed_idx < 0:
-                     self._send_json_response(400, {"status": "error", "message": "'fixed_idx' must be a non-negative integer."})
-                     return
-                if not isinstance(visualize, bool):
-                     self._send_json_response(400, {"status": "error", "message": "'visualize' must be a boolean."})
-                     return
-                if not isinstance(output_dir, str):
-                     self._send_json_response(400, {"status": "error", "message": "'output_dir' must be a string."})
-                     return
-
-                results = perform_simulation(
-                    n_matches, initial_state, core_params, num_accounts,
-                    episodes, policy_name, fixed_idx, visualize, output_dir
-                )
-                # Structure: {'simulation_results': ..., 'visualization_files': ..., 'error': ... (optional)}
-                response_data = {"status": "success", "command": "sim", "results": results}
-                if 'error' in results and results['error']: # Pass through visualization errors
-                    response_data["warning_visualization"] = results['error']
-                self._send_json_response(200, response_data)
-
-        except ValueError as e: # Errors from get_initial_state, policy validation in perform_simulation etc.
-            self._send_json_response(400, {"status": "error", "message": f"Parameter validation error: {e}"})
-        except ImportError as e: # Specifically for matplotlib if visualize=True and not installed
-            self._send_json_response(500, {"status": "error", "message": f"Server configuration error: Missing dependency for visualization. {e}"})
-        except Exception as e:
-            # Catch-all for other unexpected errors from core logic or elsewhere
-            print(f"Unexpected server error: {e}") # Log to server console
-            self._send_json_response(500, {"status": "error", "message": f"An unexpected server error occurred."})
-
-
-    def do_GET(self):
-        if self.path == MCP_PATH:
-            self._send_json_response(405, {"status": "error", "message": "Method Not Allowed. Use POST."})
         else:
-            # Fallback to SimpleHTTPRequestHandler's default GET handling (e.g. for serving files if needed)
-            # If no file serving is intended, this could also be a 404.
-            super().do_GET() 
+            raise ValueError(f"Unknown tool: {name}")
+    except Exception as e:
+        return [TextContent(type="text", text=f"エラーが発生しました: {str(e)}")]
 
-def run_server(port=PORT):
-    with socketserver.TCPServer(("", port), MCPServerHandler) as httpd:
-        print(f"Serving at port {port}")
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\nServer stopped.")
-            httpd.shutdown()
+async def handle_calculate_dp(arguments: Dict[str, Any]) -> List[TextContent]:
+    """動的プログラミング計算を実行する。"""
+    n_matches = arguments["n_matches"]
+    num_accounts = arguments.get("accounts", 2)
+    initial_ratings_float = arguments.get("initial_ratings")
+    
+    # パラメータの設定
+    import math
+    param_data = {
+        "rating_step": arguments.get("rating_step", 16),
+        "k_coeff": arguments.get("k_coeff", math.log(10) / 1600),
+        "mu": arguments.get("mu", 1500.0)
+    }
+    
+    core_params = get_parameters(param_data)
+    initial_state = get_initial_state(num_accounts, initial_ratings_float, core_params)
+    
+    results = perform_dp_calculation(n_matches, initial_state, core_params, num_accounts)
+    
+    # 結果をフォーマット
+    result_text = f"""動的プログラミング計算結果:
+
+試合数: {n_matches}
+アカウント数: {num_accounts}
+初期状態: {list(initial_state.ratings)}
+
+期待値: {results['expected_value_int']}
+最適行動: アカウント {results['best_action_account_index']} を選択
+"""
+    
+    return [TextContent(type="text", text=result_text)]
+
+async def handle_run_simulation(arguments: Dict[str, Any]) -> List[TextContent]:
+    """シミュレーションを実行する。"""
+    n_matches = arguments["n_matches"]
+    num_accounts = arguments.get("accounts", 2)
+    initial_ratings_float = arguments.get("initial_ratings")
+    episodes = arguments.get("episodes", 1000)
+    policy_name = arguments.get("policy", "all")
+    fixed_idx = arguments.get("fixed_idx", 0)
+    
+    # パラメータの設定
+    import math
+    param_data = {
+        "rating_step": arguments.get("rating_step", 16),
+        "k_coeff": arguments.get("k_coeff", math.log(10) / 1600),
+        "mu": arguments.get("mu", 1500.0)
+    }
+    
+    core_params = get_parameters(param_data)
+    initial_state = get_initial_state(num_accounts, initial_ratings_float, core_params)
+    
+    results = perform_simulation(
+        n_matches, initial_state, core_params, num_accounts,
+        episodes, policy_name, fixed_idx, False, "."  # visualize=False
+    )
+    
+    # 結果をフォーマット
+    result_text = f"""シミュレーション結果:
+
+試合数: {n_matches}
+アカウント数: {num_accounts}
+エピソード数: {episodes}
+ポリシー: {policy_name}
+初期状態: {list(initial_state.ratings)}
+
+"""
+    
+    if 'simulation_results' in results:
+        for result in results['simulation_results']:
+            result_text += f"\n{result['policy_name']}:\n"
+            result_text += f"  平均最終レーティング: {result['mean_final_rating']:.2f}\n"
+            result_text += f"  標準偏差: {result['std_final_rating']:.2f}\n"
+    
+    return [TextContent(type="text", text=result_text)]
+
+
+
+async def main():
+    """MCPサーバーのメインエントリーポイント。"""
+    try:
+        # 標準入出力を使ってサーバーを実行
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name="multi-account-simulator",
+                    server_version="0.1.0",
+                    capabilities={},
+                ),
+            )
+    except Exception as e:
+        import traceback
+        print(f"MCPサーバーエラー: {e}", file=sys.stderr)
+        print("詳細なエラー情報:", file=sys.stderr)
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
-    run_server()
+    asyncio.run(main())
