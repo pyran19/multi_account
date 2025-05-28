@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, Iterable
-
-from .parameters import RATING_STEP
+from typing import Tuple, Iterable, Union
 
 __all__ = ["State"]
 
@@ -15,16 +13,21 @@ class State:
 
     * ratings は降順 (最大→最小) のタプルとして保持。
     * 不変なのでハッシュ可能、memo 化に使える。
+    * 内部では整数レート（適正レートμからの勝ち数）を使用。
+    * そもそも一貫して整数レートを使用するのでこのファイル内で実数レートとの区別は出ない
     """
 
-    ratings: Tuple[float, ...]
-
+    ratings: Tuple[int, ...]  # 整数レート（適正レートからの勝ち数）
     # ---------------------------
     # ファクトリ
     # ---------------------------
     @classmethod
-    def from_iterable(cls, ratings: Iterable[float]) -> "State":
-        """Iterable から生成し、内部で降順ソートする。"""
+    def from_iterable(cls, ratings: Iterable[int]) -> "State":
+        """Iterable から生成し、内部で降順ソートする。
+        
+        Args:
+            ratings: レートのイテラブル
+        """
         return cls(tuple(sorted(ratings, reverse=True)))
 
     # ---------------------------
@@ -32,7 +35,7 @@ class State:
     # ---------------------------
 
     @property
-    def best(self) -> float:
+    def best(self) -> int:
         """現在の最大レート (= ratings[0])"""
         return self.ratings[0]
 
@@ -45,8 +48,9 @@ class State:
     # 状態遷移
     # ---------------------------
 
-    def after_match(self, idx: int, won: bool, step: int = RATING_STEP) -> "State":
-        """idx 番目のアカウントが勝利/敗北した後の新しい State を返す。"""
+    def after_match(self, idx: int, won: bool, step: int = 1) -> "State":
+        """idx 番目のアカウントが勝利/敗北した後の新しい State を返す。
+        """
         delta = step if won else -step
         new_ratings = list(self.ratings)
         new_ratings[idx] += delta
