@@ -175,9 +175,10 @@ cython_debug/
 
 # エディタ用設定
 *.code-workspace
-.cursorignore
+*.cursorignore
+
+results/
 
 *.png
 *.jpg
-
-results
+*.pdf
