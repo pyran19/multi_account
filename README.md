@@ -39,6 +39,7 @@
 └── src/            # 実装コード
     ├── core/       # DP・数式処理
     ├── simulator/  # Monte-Carlo シミュレーション
+    ├── mcp_server.py # MCPサーバー
     └── tests/      # pytest
 ```
 
@@ -61,9 +62,10 @@ DP 計算は試合数 `n` とアカウント数 `r` が増えるにつれ指数�
 そこで、本リポジトリでは**計算結果をディスクにキャッシュ**し、同じ条件を再度計算する場合に再利用します。
 
 ### 5.1 仕組み
-1. `src/cli.py` の `dp` サブコマンド実行時、
+1. `src/cli.py` の `dp` サブコマンド、または `src/mcp_server.py` を介した `calculate_dp` ツール実行時、
    - まず `results/cache/n{n}_acc{r}.txt` を探索し、該当するレート列があればその値を読み込みます (再計算しない)。
    - 無ければ通常通り DP を実行し、得られた期待値と最適アクションをファイルへ追記します。
+   - `src/core/dp.py` 内では、`CACHE_INTERVAL`（デフォルト50試合）ごとに中間結果もキャッシュファイルに保存されます。
 2. これにより **一度計算した状態は永続的にキャッシュ** されるため、次回以降は即時に結果を取得できます。
 
 ### 5.2 出力ファイル形式
@@ -86,7 +88,11 @@ account1, account2, account3, expectation, best_action
 ### 5.3 使い方
 ```bash
 # 例) 残り 20 試合、アカウント 3 つで全て 1500 スタートの場合
+# (初期レートを省略すると、全アカウントがデフォルトの適正レート mu で初期化されます)
 python -m src.cli dp --n 20 --accounts 3
+
+# 初期レートを個別に指定する場合 (例: 1500, 1516, 1484)
+python -m src.cli dp --n 20 --accounts 3 --initial 1500 1516 1484
 ```
 初回は DP 計算を行い、2 回目以降はキャッシュが利用されます。
 
@@ -119,155 +125,120 @@ i = round((r - μ) / d)
 
 ---
 
-## 7. MCP Server for AI Integration
+## 7. AI連携のためのMCPサーバー (MCP Server for AI Integration)
 
-### Purpose
-The MCP (Monte Carlo Planner) Server provides an HTTP interface to run Dynamic Programming (DP) calculations and Monte Carlo simulations. This allows external programs, such as AI agents or other planning tools, to leverage the core logic of this repository without direct Python integration.
+### 7.1 目的
+`src/mcp_server.py` は、標準入出力（stdio）を介してMCP（Multi-Context Planner）プロトコルを使用し、外部プログラム（AIエージェントや他のプランニングツールなど）が本リポジトリのコアロジック（DP計算やシミュレーション）を利用できるようにするためのサーバーです。HTTPサーバーではなく、より軽量なプロセス間通信の仕組みを採用しています。
 
-### Starting the Server
-To start the server, run the following command from the root of the repository:
+### 7.2 サーバーの起動
+リポジトリのルートディレクトリから以下のコマンドでサーバーを起動します。
 ```bash
 python -m src.mcp_server
 ```
-By default, the server listens on port `8080`. You can specify a different port using the `--port` argument (though this CLI argument is not explicitly implemented in the current `src.mcp_server.py`, the code structure allows for it to be added if needed; currently, it uses the `PORT` variable). For example, to run on port 8000 if `PORT` was changed or if argument parsing was added:
-```bash
-# Assuming PORT variable in mcp_server.py is changed or --port is implemented
-# python -m src.mcp_server --port 8000
-```
-Currently, to change the port, you would need to modify the `PORT` variable in `src/mcp_server.py`.
+サーバーは標準入力からのJSONメッセージを待ち受け、結果を標準出力にJSONメッセージとして返します。
 
-### Endpoint
-The server exposes a single endpoint for all operations:
-*   **`POST /mcp`**
+### 7.3 MCPプロトコルと通信形式
+MCPサーバーとの通信は、JSON形式のメッセージを標準入力に送信し、標準出力からJSON形式の応答を受信することで行われます。
 
-### Request Format
-All requests must be HTTP POST requests with a JSON body and `Content-Type: application/json`.
+**初期化:**
+サーバー起動後、クライアントはまずサーバーの能力に関する情報（利用可能なツールなど）を要求することがあります。
 
-The JSON body must contain a `command` field specifying the operation ("dp" or "sim") and other parameters based on the command.
+**ツール呼び出し:**
+クライアントが特定のタスク（例: DP計算）を実行したい場合、ツール呼び出しリクエストを送信します。
 
-**Common Parameters (for both `dp` and `sim`):**
-*   `command` (string, required): The command to execute. Must be `"dp"` or `"sim"`.
-*   `n` (integer, required): The number of remaining matches. Must be a non-negative integer.
-*   `accounts` (integer, optional, default: `2`): The number of accounts. Must be a positive integer.
-*   `initial` (list of numbers, optional, default: `null` which results in `mu` for all accounts): A list of initial float ratings for each account. If provided, its length must match `accounts`.
-*   `rating_step` (number, optional, default: `16`): The rating change per match (e.g., 16 points).
-*   `k_coeff` (number, optional, default: `math.log(10) / 1600` ≈ `0.001439`): The k-coefficient for the linear win probability approximation.
-*   `mu` (number, optional, default: `1500.0`): The player's true/mean rating.
+**概念的な対話フロー:**
+1.  クライアント: `list_tools` リクエストを送信 (MCPプロトコル標準)
+2.  サーバー: 利用可能なツールのリスト (`calculate_dp`, `run_simulation`) を含むJSON応答を返す。
+3.  クライアント: 例えば `calculate_dp` ツールを呼び出すためのJSONリクエストを送信。
+4.  サーバー: `calculate_dp` を実行し、結果をJSONで返す。
 
-**Parameters specific to the `sim` command:**
-*   `episodes` (integer, optional, default: `1000`): The number of simulation episodes to run. Must be a positive integer.
-*   `policy` (string, optional, default: `"all"`): The policy to use for simulation. Valid values include `"optimal"`, `"random"`, `"fixed"`, `"greedy"`, `"all"`.
-*   `fixed_idx` (integer, optional, default: `0`): The account index to use if `policy` is `"fixed"`. Must be a non-negative integer and less than `accounts`.
-*   `visualize` (boolean, optional, default: `false`): Whether to generate and save visualization plots. If `true`, `matplotlib` must be installed.
-*   `output_dir` (string, optional, default: `.`): The directory where visualization plots will be saved if `visualize` is `true`.
+### 7.4 利用可能なツール
+サーバーは以下のツールを提供します。
 
-### Response Format
+#### 7.4.1 `calculate_dp`
+動的プログラミング（DP）を用いて、指定された条件下での最終レートの期待値と最適行動を計算します。
 
-**Success Response (common structure):**
+**パラメータ:**
+*   `n_matches` (整数, 必須): 残り試合数。0以上の整数。
+*   `accounts` (整数, オプション, デフォルト: `2`): アカウント数。1以上の整数。
+*   `initial_ratings` (数値の配列, オプション): 各アカウントの初期レート（浮動小数点数）のリスト。指定する場合、要素数は `accounts` と一致する必要があります。省略時は全アカウントが `mu` (適正レート)で初期化されます。
+*   `rating_step` (数値, オプション, デフォルト: `16`): 1試合あたりのレート変動幅。
+*   `k_coeff` (数値, オプション, デフォルト: `log(10)/1600`): 勝率計算のための係数。
+*   `mu` (数値, オプション, デフォルト: `1500.0`): プレイヤーの適正レート。
+
+**リクエスト例 (概念):**
 ```json
 {
-  "status": "success",
-  "command": "<command_executed>",
-  "results": {
-    // Command-specific results go here
+  "type": "call_tool",
+  "id": "request-1",
+  "tool": "calculate_dp",
+  "arguments": {
+    "n_matches": 10,
+    "accounts": 2,
+    "initial_ratings": [1500.0, 1520.0],
+    "mu": 1500.0
   }
 }
 ```
 
-**For `dp` command, `results` will contain:**
+**レスポンス例 (概念):**
 ```json
 {
-  "expected_value_int": 1510, // Integer representation of expected max rating
-  "best_action_account_index": 0, // Index of account to play, or null to stop
-  "using_cache": false,
-  "initial_ratings_int": [0, 0], // Integer ratings
-  "initial_ratings_float": [1500.0, 1500.0] // Float ratings
+  "type": "tool_response",
+  "id": "request-1",
+  "tool_name": "calculate_dp",
+  "content": [
+    {
+      "type": "text",
+      "text": "動的プログラミング計算結果:\n\n試合数: 10\nアカウント数: 2\n初期状態: [1500.0, 1520.0]\n\n期待値: 1525 (整数表現: ...)\n最適行動: アカウント 1 を選択\n"
+    }
+  ]
 }
 ```
+*(注意: 実際のレスポンス形式はMCPプロトコルに準拠し、`text` フィールドの内容は `src/mcp_server.py` の `handle_calculate_dp` 関数によって生成される文字列となります。)*
 
-**For `sim` command, `results` will contain:**
+#### 7.4.2 `run_simulation`
+指定されたポリシーに基づいてモンテカルロシミュレーションを実行し、複数のエピソードにおける最終レートの分布などを評価します。
+
+**パラメータ:**
+*   `n_matches` (整数, 必須): 最大試合数。0以上の整数。
+*   `accounts` (整数, オプション, デフォルト: `2`): アカウント数。1以上の整数。
+*   `initial_ratings` (数値の配列, オプション): 各アカウントの初期レート（浮動小数点数）のリスト。省略時は全アカウントが `mu` で初期化。
+*   `episodes` (整数, オプション, デフォルト: `1000`): シミュレーションするエピソード数。1以上の整数。
+*   `policy` (文字列, オプション, デフォルト: `"all"`): 使用するポリシー。有効な値は `"optimal"`, `"random"`, `"fixed"`, `"greedy"`, `"all"`。
+*   `fixed_idx` (整数, オプション, デフォルト: `0`): `policy` が `"fixed"` の場合に選択するアカウントのインデックス。0以上かつ `accounts` 未満。
+*   `rating_step` (数値, オプション, デフォルト: `16`): レート変動幅。
+*   `k_coeff` (数値, オプション, デフォルト: `log(10)/1600`): 勝率係数。
+*   `mu` (数値, オプション, デフォルト: `1500.0`): 適正レート。
+
+**リクエスト例 (概念):**
 ```json
 {
-  "simulation_results": [ /* list of simulation result objects/dicts */ ],
-  "visualization_files": [ /* list of paths to saved plot images if visualize=true */ ],
-  "initial_ratings_int": [0, 0],
-  "initial_ratings_float": [1500.0, 1500.0],
-  "error": "Optional error message if visualization failed, e.g., matplotlib not found"
-}
-```
-If visualization produces an error (e.g., `matplotlib` not found when `visualize: true`), the main response status will still be `200 OK` and `status: "success"`, but the `results.error` field will contain the error message, and the top-level response will also include `warning_visualization: "<error_message>"`.
-
-**Error Response (e.g., HTTP 400 for bad request, HTTP 500 for server error):**
-```json
-{
-  "status": "error",
-  "message": "<Detailed error message>"
-}
-```
-
-### Example Usage
-
-**1. DP Calculation Request:**
-```bash
-curl -X POST -H "Content-Type: application/json" \
-  -d '{
-        "command": "dp",
-        "n": 10,
-        "accounts": 2,
-        "initial": [1500.0, 1520.0],
-        "mu": 1500.0,
-        "rating_step": 16,
-        "k_coeff": 0.001439
-      }' \
-  http://localhost:8080/mcp
-```
-
-**Expected DP Response (example):**
-```json
-{
-  "status": "success",
-  "command": "dp",
-  "results": {
-    "expected_value_int": 10, 
-    "best_action_account_index": 1,
-    "using_cache": false,
-    "initial_ratings_int": [0, 1], 
-    "initial_ratings_float": [1500.0, 1516.0] 
+  "type": "call_tool",
+  "id": "request-2",
+  "tool": "run_simulation",
+  "arguments": {
+    "n_matches": 20,
+    "accounts": 2,
+    "initial_ratings": [1480.0, 1500.0],
+    "episodes": 100,
+    "policy": "greedy"
   }
 }
 ```
-*(Note: `expected_value_int` and `initial_ratings_int` are based on the integer representation relative to `mu` and `rating_step`. The example values are illustrative.)*
 
-**2. Simulation Request:**
-```bash
-curl -X POST -H "Content-Type: application/json" \
-  -d '{
-        "command": "sim",
-        "n": 20,
-        "accounts": 2,
-        "initial": [1480.0, 1500.0],
-        "episodes": 100,
-        "policy": "greedy",
-        "visualize": false
-      }' \
-  http://localhost:8080/mcp
-```
-
-**Expected Simulation Response (example):**
+**レスポンス例 (概念):**
 ```json
 {
-  "status": "success",
-  "command": "sim",
-  "results": {
-    "simulation_results": [
-      { /* result structure for GreedyPolicy */ } 
-      // ... (structure depends on SimulationResult details)
-    ],
-    "visualization_files": [],
-    "initial_ratings_int": [-1, 0], 
-    "initial_ratings_float": [1484.0, 1500.0]
-  }
+  "type": "tool_response",
+  "id": "request-2",
+  "tool_name": "run_simulation",
+  "content": [
+    {
+      "type": "text",
+      "text": "シミュレーション結果:\n\n試合数: 20\nアカウント数: 2\nエピソード数: 100\nポリシー: greedy\n初期状態: [1480.0, 1500.0]\n\nGreedyPolicy:\n  平均最終レーティング: 1510.50\n  標準偏差: 25.30\n"
+    }
+  ]
 }
 ```
-*(Note: `initial_ratings_float` in response might be slightly different from input due to internal float to int conversion and back, if input is not a multiple of `rating_step` from `mu`.)*
-
+*(注意: 実際のレスポンス形式はMCPプロトコルに準拠し、`text` フィールドの内容は `src/mcp_server.py` の `handle_run_simulation` 関数によって生成される文字列となります。可視化オプションはMCPサーバー経由では直接サポートされていません。)*
