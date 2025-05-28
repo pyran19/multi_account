@@ -27,9 +27,9 @@ def plot_rating_distributions(results: List[SimulationResult], params: Parameter
         )
     
     # グラフの設定
-    plt.xlabel("Final Rating")
-    plt.ylabel("Frequency")
-    plt.title(title or "Rating Distribution by Policy")
+    plt.xlabel("最終レート")
+    plt.ylabel("頻度")
+    plt.title(title or "ポリシー別レート分布")
     plt.legend()
     plt.grid(True, alpha=0.3)
     
@@ -57,9 +57,9 @@ def plot_rating_comparison(results: List[SimulationResult], params: Parameters, 
     plt.bar(x, means, width, yerr=stds, capsize=5, alpha=0.7)
     
     # グラフの設定
-    plt.xlabel("Policy")
-    plt.ylabel("Final Rating")
-    plt.title(title or "Policy Comparison")
+    plt.xlabel("ポリシー")
+    plt.ylabel("最終レート")
+    plt.title(title or "ポリシー比較")
     plt.xticks(x, policies)
     plt.ylim(params.mu - 100, max(means) + 100)
     plt.grid(True, alpha=0.3, axis="y")
@@ -84,14 +84,16 @@ def save_plots(results: List[SimulationResult], params: Parameters, prefix: str 
     max_matches = results[0].max_matches
     
     # タイトル生成
-    title = f"Initial: {initial_ratings}, Max Matches: {max_matches}"
+    base_title_info = f"Initial: {initial_ratings}, Max Matches: {max_matches}"
     
     # 分布プロット
-    dist_plot = plot_rating_distributions(results, params, title=f"Rating Distribution\n{title}")
+    title_dist = f"レート分布\n{base_title_info}"
+    dist_plot = plot_rating_distributions(results, params, title=title_dist)
     dist_plot.savefig(f"{prefix}_distribution.png", dpi=300, bbox_inches="tight")
     
     # 比較プロット
-    comp_plot = plot_rating_comparison(results, params, title=f"Policy Comparison\n{title}")
+    title_comp = f"ポリシー比較\n{base_title_info}"
+    comp_plot = plot_rating_comparison(results, params, title=title_comp)
     comp_plot.savefig(f"{prefix}_comparison.png", dpi=300, bbox_inches="tight")
     
     plt.close("all")
