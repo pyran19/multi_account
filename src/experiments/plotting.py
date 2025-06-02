@@ -26,7 +26,7 @@ class ExperimentPlotter:
         """
         plt.style.use(style)
         plt.rcParams['font.size'] = font_size
-        plt.rcParams['font.family'] = ['DejaVu Sans', 'Hiragino Sans', 'Yu Gothic', 'Meiryo', 'sans-serif']
+        plt.rcParams['font.family'] = ['DejaVu Sans', 'Yu Gothic', 'Meiryo', 'sans-serif']
         
         # カラーパレットの設定
         self.colors = sns.color_palette("husl", n_colors=10)

@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Pythonプロジェクトでパッケージ管理にuvを使用する
+globs: ["**/*.py", "requirements.txt", "pyproject.toml"]
+alwaysApply: false
+---
+
+# Pythonパッケージ管理にはuvを使用する
+
+Pythonプロジェクトでは以下の方針でuvを使用します：
+
+- 環境作成: `uv venv` (従来の`python -m venv`ではなく)
+- 環境有効化: `source .venv/bin/activate`（Windows: `.\.venv\Scripts\Activate.ps1`）
+- パッケージインストール: `uv pip install` (従来の`pip install`ではなく)
+
+- 依存関係の記録: `uv pip freeze > requirements.txt`

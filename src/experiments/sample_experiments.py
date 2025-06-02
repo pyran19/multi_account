@@ -16,10 +16,10 @@ def run_basic_n_p_experiment():
     
     runner = ExperimentRunner()
     
-    # パラメータ設定（整数レート形式）
-    n_values = list(range(10, 101, 10))  # n = 10, 20, ..., 100
-    v_rates = [0, 6, 13, 19, 25]  # 整数レート：適正レートからの差分/16
-    # 実数換算: [1500, 1596, 1708, 1804, 1900]に相当
+    # パラメータ設定（整数レート形式、動作確認用に小さい値）
+    n_values = list(range(5, 26, 5))  # n = 5, 10, 15, 20, 25
+    v_rates = [0, 1, 2, 3]  # 整数レート：隣り合うレートの差=1
+    # 実数換算: [1500, 1516, 1532, 1548]に相当
     
     # 実験実行
     results = runner.run_n_p_experiment(
@@ -38,12 +38,12 @@ def run_basic_v0_p_experiment():
     
     runner = ExperimentRunner()
     
-    # パラメータ設定（整数レート形式）
-    v0_values = list(range(-19, 20, 3))  # v0 = -19, -16, ..., 19
-    # 実数換算: 1196, 1244, ..., 1804に相当
-    n = 50  # 残り試合数
-    dv = 6  # レート差（整数形式、実数では96に相当）
-    r = 5  # アカウント数
+    # パラメータ設定（整数レート形式、動作確認用に小さい値）
+    v0_values = list(range(-3, 4, 1))  # v0 = -3, -2, -1, 0, 1, 2, 3
+    # 実数換算: 1452, 1468, 1484, 1500, 1516, 1532, 1548に相当
+    n = 20  # 残り試合数
+    dv = 1  # レート差（整数形式、実数では16に相当）
+    r = 3  # アカウント数
     
     # 実験実行
     results = runner.run_v0_p_experiment(
@@ -64,12 +64,12 @@ def run_basic_dv_p_experiment():
     
     runner = ExperimentRunner()
     
-    # パラメータ設定（整数レート形式）
-    dv_values = list(range(0, 13, 1))  # dv = 0, 1, 2, ..., 12
-    # 実数換算: 0, 16, 32, ..., 192に相当
-    n = 50  # 残り試合数
+    # パラメータ設定（整数レート形式、動作確認用に小さい値）
+    dv_values = list(range(0, 6, 1))  # dv = 0, 1, 2, 3, 4, 5
+    # 実数換算: 0, 16, 32, 48, 64, 80に相当
+    n = 20  # 残り試合数
     v0 = 0  # ベースラインレート（適正レート）
-    r = 5  # アカウント数
+    r = 3  # アカウント数
     
     # 実験実行
     results = runner.run_dv_p_experiment(
@@ -92,37 +92,37 @@ def run_comparison_experiment():
     plotter = ExperimentPlotter()
     runner = ExperimentRunner(data_manager, plotter)
     
-    # 3つの異なるレート分布で比較（整数レート形式）
+    # 3つの異なるレート分布で比較（整数レート形式、動作確認用に小さい値）
     datasets = []
     
-    # 条件1: 狭い分布
-    n_values = list(range(10, 101, 10))
-    v_rates_narrow = [-3, -2, 0, 2, 3]  # 実数換算: [1452, 1468, 1500, 1532, 1548]
-    results1 = runner.run_n_p_experiment(n_values, v_rates_narrow, save_results=False)
+    # 条件1: 等間隔分布（差=1）
+    n_values = list(range(5, 26, 5))  # n = 5, 10, 15, 20, 25
+    v_rates_equal = [0, 1, 2]  # 実数換算: [1500, 1516, 1532]
+    results1 = runner.run_n_p_experiment(n_values, v_rates_equal, save_results=False)
     datasets.append({
         'x_values': results1['x_values'],
         'p_values': results1['p_values'],
-        'label': '狭い分布 (dv=1)',
+        'label': '等間隔分布 (dv=1)',
         'x_label': '残り試合数 n'
     })
     
-    # 条件2: 中間分布
-    v_rates_medium = [-6, -3, 0, 3, 6]  # 実数換算: [1404, 1452, 1500, 1548, 1596]
-    results2 = runner.run_n_p_experiment(n_values, v_rates_medium, save_results=False)
+    # 条件2: 狭い分布
+    v_rates_narrow = [1, 2, 3]  # 実数換算: [1516, 1532, 1548]
+    results2 = runner.run_n_p_experiment(n_values, v_rates_narrow, save_results=False)
     datasets.append({
         'x_values': results2['x_values'],
         'p_values': results2['p_values'],
-        'label': '中間分布 (dv=3)',
+        'label': '高レート分布 (1516-1548)',
         'x_label': '残り試合数 n'
     })
     
     # 条件3: 広い分布
-    v_rates_wide = [-12, -6, 0, 6, 12]  # 実数換算: [1308, 1404, 1500, 1596, 1692]
+    v_rates_wide = [-1, 0, 2]  # 実数換算: [1484, 1500, 1532]
     results3 = runner.run_n_p_experiment(n_values, v_rates_wide, save_results=False)
     datasets.append({
         'x_values': results3['x_values'],
         'p_values': results3['p_values'],
-        'label': '広い分布 (dv=6)',
+        'label': '広い分布 (1484-1532)',
         'x_label': '残り試合数 n'
     })
     
@@ -188,13 +188,13 @@ def run_custom_experiment_example():
     # アカウント数を変化させる実験
     def account_count_generator(r: float) -> tuple[int, list[int]]:
         """アカウント数rから(n, v_rates)を生成"""
-        n = 50  # 固定
+        n = 20  # 固定
         v0 = 0  # 適正レート
-        dv = 6  # レート差（整数形式）
+        dv = 1  # レート差（整数形式）
         v_rates = [v0 + i * dv for i in range(int(r))]
         return n, v_rates
     
-    r_values = list(range(2, 11))  # アカウント数 2～10
+    r_values = list(range(2, 6))  # アカウント数 2～5（動作確認用に小さく）
     
     results = runner.run_custom_experiment(
         x_values=r_values,
@@ -209,11 +209,12 @@ def run_custom_experiment_example():
 
 
 if __name__ == "__main__":
-    print("実験サンプルスクリプトを実行します\n")
+    print("実験サンプルスクリプトを実行します（動作確認用の小さい値）\n")
     print("注意: 整数レート形式を使用しています")
     print("  - 適正レート(1500) = 0")
     print("  - 1勝分(+16) = +1")
-    print("  - 1敗分(-16) = -1\n")
+    print("  - 1敗分(-16) = -1")
+    print("  - 動作確認のため、n≈20、レート差=1で実行\n")
     
     # 各実験を順番に実行
     # コメントアウトして必要な実験のみ実行することも可能
