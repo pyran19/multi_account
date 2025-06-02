@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Tuple, Optional, Dict
+from typing import Tuple, Optional, Dict, List
 
 from .state import State
 from .parameters import Parameters
@@ -11,6 +11,7 @@ from .result_cache import save_result, load_available_caches
 __all__ = [
     "expectation",
     "best_action",
+    "get_expected_values_for_each_action",
 ]
 
 # キャッシュ計算データを保持するためのグローバル変数
@@ -156,3 +157,57 @@ def best_action(n: int, state: State, params: Parameters) -> Optional[int]:
     # キャッシュに保存
     _calc_cache[cache_key] = (best_value, best_idx)
     return best_idx 
+
+
+# ---------------------------
+# 各アクションの期待値
+# ---------------------------
+
+def get_expected_values_for_each_action(
+    n: int, state_input: State | Tuple[int, ...], params: Parameters
+) -> List[float]:
+    """指定された状態から各アカウントでプレイした場合の期待値を計算してリストで返す。"""
+    global _loaded_caches
+
+    # 入力がタプルの場合はStateオブジェクトに変換
+    if isinstance(state_input, tuple):
+        state = State.from_iterable(state_input)
+    else:
+        state = state_input
+
+    # キャッシュが空の場合は、初期化 (expectation関数と同様のロジック)
+    if not _loaded_caches:
+        accounts = len(state.ratings)
+        _loaded_caches = load_available_caches(accounts)
+
+    # n=0 の場合: これ以上試合はできないので、各アクションの期待値は現在の最大レートとする
+    # (実際にはアクションは不可能だが、呼び出し元が一貫した処理をできるようにするため)
+    if n == 0:
+        return [float(state.best)] * len(state.ratings)
+
+    action_expectations: List[float] = []
+
+    for idx, int_rating in enumerate(state.ratings):
+        # 整数レートから勝率計算
+        # Note: _expectation_cached は内部で整数レートを扱うが、
+        # params.win_prob は実数レートを期待する可能性がある。
+        # ここでは既存の best_action のロジックに合わせて実数レートを使用する。
+        float_rating = params.int_to_float_rating(int_rating)
+        p = params.win_prob(float_rating)
+
+        # 勝利時・敗北時の次状態（整数レートのまま）
+        # State.after_match は内部でよしなに処理してくれる
+        next_win_state = state.after_match(idx, won=True) # stepはState内部で処理
+        next_lose_state = state.after_match(idx, won=False) # stepはState内部で処理
+
+        # 再帰的に期待値を計算
+        # _expectation_cached は (n, ratings_tuple, params) を引数に取る
+        exp_win = _expectation_cached(n - 1, next_win_state.ratings, params)
+        exp_lose = _expectation_cached(n - 1, next_lose_state.ratings, params)
+        
+        # このアクションの期待値
+        # _expectation_cached が返すのは整数レートの期待値なので、そのまま計算に使う
+        exp_action_idx = p * float(exp_win) + (1.0 - p) * float(exp_lose)
+        action_expectations.append(exp_action_idx)
+
+    return action_expectations

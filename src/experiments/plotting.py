@@ -37,7 +37,7 @@ class ExperimentPlotter:
                 figsize: Tuple[int, int] = (10, 6),
                 show_grid: bool = True,
                 show_legend: bool = True,
-                y_label: str = "期待レート（整数形式）",
+                y_label: str = "アカウント選択時期待値",
                 line_style: str = '-o') -> plt.Figure:
         """
         x-Pプロットを描画
