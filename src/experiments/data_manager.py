@@ -53,6 +53,7 @@ class ExperimentDataManager:
     
     def save_xp_data(self, x_values: List[float], 
                      p_values: List[List[float]], 
+                     v1_values: List[float],
                      x_label: str = "x") -> str:
         """
         x-Pプロットデータをcsv保存する
@@ -60,6 +61,7 @@ class ExperimentDataManager:
         Args:
             x_values: xの値のリスト
             p_values: 各アカウントの期待値リスト（2次元配列）
+            v1_values: 最大レート（v1）の値のリスト
             x_label: xのラベル（デフォルトは"x"）
             
         Returns:
@@ -68,18 +70,18 @@ class ExperimentDataManager:
         filename = self.generate_filename("xp", "csv")
         filepath = self.csv_dir / filename
         
-        # CSVヘッダーの作成
+        # CSVヘッダーの作成（n, v1, P1, P2, P3, ...の順序）
         account_count = len(p_values[0]) if p_values else 0
-        headers = [x_label] + [f"P{i+1}" for i in range(account_count)]
+        headers = [x_label, "v1"] + [f"P{i+1}" for i in range(account_count)]
         
         # データの書き込み
         with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(headers)
             
-            for x, p_row in zip(x_values, p_values):
-                # 期待値は小数値として保存
-                row = [x] + p_row
+            for x, v1, p_row in zip(x_values, v1_values, p_values):
+                # x, v1, 期待値の順で保存
+                row = [x, v1] + p_row
                 writer.writerow(row)
         
         return str(filepath)
@@ -134,7 +136,7 @@ class ExperimentDataManager:
         
         return config
     
-    def load_xp_data(self, csv_filename: str) -> tuple[List[float], List[List[float]], str]:
+    def load_xp_data(self, csv_filename: str) -> tuple[List[float], List[List[float]], List[float], str]:
         """
         保存されたx-Pプロットデータを読み込む
         
@@ -142,12 +144,13 @@ class ExperimentDataManager:
             csv_filename: CSVファイル名
             
         Returns:
-            (x_values, p_values, x_label) のタプル
+            (x_values, p_values, v1_values, x_label) のタプル
         """
         filepath = self.csv_dir / csv_filename
         
         x_values = []
         p_values = []
+        v1_values = []
         x_label = "x"
         
         with open(filepath, 'r', encoding='utf-8') as csvfile:
@@ -157,10 +160,11 @@ class ExperimentDataManager:
             
             for row in reader:
                 x_values.append(float(row[0]))
-                # 期待値は小数値として保存されている
-                p_values.append([float(val) for val in row[1:]])
+                v1_values.append(float(row[1]))  # v1列の値
+                # P1, P2, P3, ...の期待値（v1列の後から）
+                p_values.append([float(val) for val in row[2:]])
         
-        return x_values, p_values, x_label
+        return x_values, p_values, v1_values, x_label
     
     def load_experiment_config(self, config_filename: str) -> Dict[str, Any]:
         """

@@ -160,7 +160,7 @@ def load_and_plot_experiment():
         csv_file = experiments['csv_files'][-1]  # 最新のファイル
         print(f"\n{csv_file} を読み込みます...")
         
-        x_values, p_values, x_label = data_manager.load_xp_data(csv_file)
+        x_values, p_values, v1_values, x_label = data_manager.load_xp_data(csv_file)
         
         # 新しいグラフを作成
         graph_filename = data_manager.generate_filename("replot", "png")
@@ -169,6 +169,7 @@ def load_and_plot_experiment():
         fig = plotter.plot_xp(
             x_values=x_values,
             p_values=p_values,
+            v1_values=v1_values,
             x_label=x_label,
             title=f"再プロット: {x_label}-P",
             save_path=str(graph_path)

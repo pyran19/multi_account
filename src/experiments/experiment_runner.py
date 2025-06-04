@@ -63,6 +63,7 @@ class ExperimentRunner:
             実験結果の辞書
         """
         p_values = []
+        v1_values = []  # 最大レート（v1）を記録
         
         print(f"n-Pプロット実験を開始します...")
         print(f"アカウント数: {len(v_rates)}")
@@ -71,14 +72,21 @@ class ExperimentRunner:
         
         # 各n値に対して期待値を計算
         for n in n_values:
-            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
-            p_values.append(action_specific_expected_values) # MODIFIED: variable name
-            print(f"n={n}: Action EVs {[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement
+            # レート配列をソート（降順）して最大レートを取得
+            sorted_v_rates = sorted(v_rates, reverse=True)
+            v1 = sorted_v_rates[0]  # 最大レート
+            
+            action_specific_expected_values = get_expected_values_per_action(n, sorted_v_rates)
+            p_values.append(action_specific_expected_values)
+            v1_values.append(v1)
+            
+            print(f"n={n}: v1={v1}, Action EVs {[f'{p:.2f}' for p in action_specific_expected_values]}")
         
         # データの保存とグラフ描画
         results = {
             'x_values': n_values,
             'p_values': p_values,
+            'v1_values': v1_values,
             'x_label': '残り試合数 n',
             'x_type': 'n',
             'fixed_params': {'v_rates': v_rates}
@@ -87,7 +95,7 @@ class ExperimentRunner:
         if save_results:
             # CSVファイルの保存
             csv_path = self.data_manager.save_xp_data(
-                n_values, p_values, x_label='n'
+                n_values, p_values, v1_values, x_label='n'
             )
             csv_filename = Path(csv_path).name
             
@@ -96,9 +104,9 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                n_values, p_values,
+                n_values, p_values, v1_values,
                 x_label='残り試合数 n',
-                title='n-P プロット',
+                title='n-P プロット（期待値差分）',
                 save_path=str(graph_path)
             )
             
@@ -143,6 +151,7 @@ class ExperimentRunner:
             実験結果の辞書
         """
         p_values = []
+        v1_values = []  # 最大レート（v1）を記録
         
         print(f"v0-Pプロット実験を開始します...")
         print(f"アカウント数: {r}")
@@ -153,14 +162,21 @@ class ExperimentRunner:
         # 各v0値に対して期待値を計算
         for v0 in v0_values:
             v_rates = self.generate_equal_interval_rates(v0, dv, r)
-            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
-            p_values.append(action_specific_expected_values) # MODIFIED: variable name
-            print(f"v0={v0}: レート{v_rates} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement (var name)
+            # レート配列をソート（降順）して最大レートを取得
+            sorted_v_rates = sorted(v_rates, reverse=True)
+            v1 = sorted_v_rates[0]  # 最大レート
+            
+            action_specific_expected_values = get_expected_values_per_action(n, sorted_v_rates)
+            p_values.append(action_specific_expected_values)
+            v1_values.append(v1)
+            
+            print(f"v0={v0}: レート{sorted_v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
         # データの保存とグラフ描画
         results = {
             'x_values': v0_values,
             'p_values': p_values,
+            'v1_values': v1_values,
             'x_label': 'ベースラインレート v0',
             'x_type': 'v0',
             'fixed_params': {'n': n, 'dv': dv, 'r': r}
@@ -169,7 +185,7 @@ class ExperimentRunner:
         if save_results:
             # CSVファイルの保存
             csv_path = self.data_manager.save_xp_data(
-                v0_values, p_values, x_label='v0'
+                v0_values, p_values, v1_values, x_label='v0'
             )
             csv_filename = Path(csv_path).name
             
@@ -178,9 +194,9 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                v0_values, p_values,
+                v0_values, p_values, v1_values,
                 x_label='ベースラインレート v0',
-                title='v0-P プロット',
+                title='v0-P プロット（期待値差分）',
                 save_path=str(graph_path)
             )
             
@@ -225,6 +241,7 @@ class ExperimentRunner:
             実験結果の辞書
         """
         p_values = []
+        v1_values = []  # 最大レート（v1）を記録
         
         print(f"dv-Pプロット実験を開始します...")
         print(f"アカウント数: {r}")
@@ -235,14 +252,21 @@ class ExperimentRunner:
         # 各dv値に対して期待値を計算
         for dv in dv_values:
             v_rates = self.generate_equal_interval_rates(v0, dv, r)
-            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
-            p_values.append(action_specific_expected_values) # MODIFIED: variable name
-            print(f"dv={dv}: レート{v_rates} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement (var name)
+            # レート配列をソート（降順）して最大レートを取得
+            sorted_v_rates = sorted(v_rates, reverse=True)
+            v1 = sorted_v_rates[0]  # 最大レート
+            
+            action_specific_expected_values = get_expected_values_per_action(n, sorted_v_rates)
+            p_values.append(action_specific_expected_values)
+            v1_values.append(v1)
+            
+            print(f"dv={dv}: レート{sorted_v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
         # データの保存とグラフ描画
         results = {
             'x_values': dv_values,
             'p_values': p_values,
+            'v1_values': v1_values,
             'x_label': 'レート差 dv',
             'x_type': 'dv',
             'fixed_params': {'n': n, 'v0': v0, 'r': r}
@@ -251,7 +275,7 @@ class ExperimentRunner:
         if save_results:
             # CSVファイルの保存
             csv_path = self.data_manager.save_xp_data(
-                dv_values, p_values, x_label='dv'
+                dv_values, p_values, v1_values, x_label='dv'
             )
             csv_filename = Path(csv_path).name
             
@@ -260,9 +284,9 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                dv_values, p_values,
+                dv_values, p_values, v1_values,
                 x_label='レート差 dv',
-                title='dv-P プロット',
+                title='dv-P プロット（期待値差分）',
                 save_path=str(graph_path)
             )
             
@@ -310,6 +334,7 @@ class ExperimentRunner:
             実験結果の辞書
         """
         p_values = []
+        v1_values = []  # 最大レート（v1）を記録
         fixed_params = {}
         
         print(f"カスタム実験 ({x_type}) を開始します...")
@@ -318,19 +343,26 @@ class ExperimentRunner:
         # 各x値に対して期待値を計算
         for x in x_values:
             n, v_rates = param_generator(x)
-            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
-            p_values.append(action_specific_expected_values) # MODIFIED: variable name
-            print(f"{x_label}={x}: n={n}, v={v_rates} → {[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement (var name)
+            # レート配列をソート（降順）して最大レートを取得
+            sorted_v_rates = sorted(v_rates, reverse=True)
+            v1 = sorted_v_rates[0]  # 最大レート
+            
+            action_specific_expected_values = get_expected_values_per_action(n, sorted_v_rates)
+            p_values.append(action_specific_expected_values)
+            v1_values.append(v1)
+            
+            print(f"{x_label}={x}: n={n}, v={sorted_v_rates}, v1={v1} → {[f'{p:.2f}' for p in action_specific_expected_values]}")
             
             # 最初の実行で固定パラメータを記録
             if not fixed_params:
                 fixed_params['sample_n'] = n
-                fixed_params['sample_v_rates'] = v_rates
+                fixed_params['sample_v_rates'] = sorted_v_rates
         
         # データの保存とグラフ描画
         results = {
             'x_values': x_values,
             'p_values': p_values,
+            'v1_values': v1_values,
             'x_label': x_label,
             'x_type': x_type,
             'fixed_params': fixed_params
@@ -339,7 +371,7 @@ class ExperimentRunner:
         if save_results:
             # 以下、保存処理は他の実験と同様
             csv_path = self.data_manager.save_xp_data(
-                x_values, p_values, x_label=x_type
+                x_values, p_values, v1_values, x_label=x_type
             )
             csv_filename = Path(csv_path).name
             
@@ -347,9 +379,9 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                x_values, p_values,
+                x_values, p_values, v1_values,
                 x_label=x_label,
-                title=f'{x_label}-P プロット',
+                title=f'{x_label}-P プロット（期待値差分）',
                 save_path=str(graph_path)
             )
             

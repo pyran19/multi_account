@@ -32,19 +32,21 @@ class ExperimentPlotter:
         self.colors = sns.color_palette("husl", n_colors=10)
     
     def plot_xp(self, x_values: List[float], p_values: List[List[float]], 
+                v1_values: List[float],
                 x_label: str = "x", title: Optional[str] = None,
                 save_path: Optional[str] = None,
                 figsize: Tuple[int, int] = (10, 6),
                 show_grid: bool = True,
                 show_legend: bool = True,
-                y_label: str = "アカウント選択時期待値",
+                y_label: str = "期待レート増分（vs 打ち切り）",
                 line_style: str = '-o') -> plt.Figure:
         """
-        x-Pプロットを描画
+        x-Pプロットを描画（期待値と最大レートの差分をプロット）
         
         Args:
             x_values: xの値のリスト
             p_values: 各アカウントの期待値リスト（2次元配列）
+            v1_values: 最大レート（v1）の値のリスト
             x_label: x軸のラベル
             title: グラフのタイトル
             save_path: 保存先のパス（Noneの場合は保存しない）
@@ -62,17 +64,24 @@ class ExperimentPlotter:
         # アカウント数を取得
         account_count = len(p_values[0]) if p_values else 0
         
-        # 各アカウントのデータをプロット
+        # 各アカウントのデータをプロット（期待値 - 最大レートの差分）
         for i in range(account_count):
             p_i_values = [p_row[i] for p_row in p_values]
+            # 期待値から最大レートを引いた差分を計算
+            diff_values = [p_i - v1 for p_i, v1 in zip(p_i_values, v1_values)]
+            
             color = self.colors[i % len(self.colors)]
             
-            ax.plot(x_values, p_i_values, line_style, 
+            ax.plot(x_values, diff_values, line_style, 
                    color=color, 
                    label=f'アカウント{i+1}',
                    markersize=6,
                    linewidth=2,
                    alpha=0.8)
+        
+        # 水平線（y=0）を追加して打ち切り基準線を示す
+        ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, 
+                   label='打ち切り基準線')
         
         # 軸ラベルとタイトルの設定
         ax.set_xlabel(x_label, fontsize=14)
