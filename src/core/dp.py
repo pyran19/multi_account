@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 # キャッシュ計算データを保持するためのグローバル変数
-_calc_cache: Dict[Tuple[int, Tuple[int, ...]], Tuple[int, Optional[int]]] = {}
+_calc_cache: Dict[Tuple[int, Tuple[int, ...]], Tuple[float, Optional[int]]] = {}
 
 # 外部ファイルからロードした可能なキャッシュ
 _loaded_caches: Dict[int, Dict[Tuple[int, ...], Tuple[float, Optional[int]]]] = {}
