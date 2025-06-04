@@ -68,8 +68,8 @@
 - [ ] AI論文計画
 - [x] 実験予定/ 実験予定2 
 - [ ] ~~解析的な理論計算~~
-- [ ] 解法の方針
-- [ ] 問題意識
+- [x] 解法の方針
+- [x] 問題意識
 - [ ] multi_account_optimization_report
 - [x] MCP_server_manual
 - [x] 実装メモ
