@@ -13,7 +13,7 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.core.dp_wrapper import evaluate_multi_account_expected_rating
+from src.core.dp_wrapper import get_expected_values_per_action # MODIFIED: Import updated
 from src.experiments.data_manager import ExperimentDataManager
 from src.experiments.plotting import ExperimentPlotter
 
@@ -71,9 +71,9 @@ class ExperimentRunner:
         
         # 各n値に対して期待値を計算
         for n in n_values:
-            expected_ratings = evaluate_multi_account_expected_rating(n, v_rates)
-            p_values.append(expected_ratings)
-            print(f"n={n}: {[f'{p:.2f}' for p in expected_ratings]}")
+            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
+            p_values.append(action_specific_expected_values) # MODIFIED: variable name
+            print(f"n={n}: Action EVs {[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement
         
         # データの保存とグラフ描画
         results = {
@@ -153,9 +153,9 @@ class ExperimentRunner:
         # 各v0値に対して期待値を計算
         for v0 in v0_values:
             v_rates = self.generate_equal_interval_rates(v0, dv, r)
-            expected_ratings = evaluate_multi_account_expected_rating(n, v_rates)
-            p_values.append(expected_ratings)
-            print(f"v0={v0}: レート{v_rates} → 期待値{[f'{p:.2f}' for p in expected_ratings]}")
+            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
+            p_values.append(action_specific_expected_values) # MODIFIED: variable name
+            print(f"v0={v0}: レート{v_rates} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement (var name)
         
         # データの保存とグラフ描画
         results = {
@@ -235,9 +235,9 @@ class ExperimentRunner:
         # 各dv値に対して期待値を計算
         for dv in dv_values:
             v_rates = self.generate_equal_interval_rates(v0, dv, r)
-            expected_ratings = evaluate_multi_account_expected_rating(n, v_rates)
-            p_values.append(expected_ratings)
-            print(f"dv={dv}: レート{v_rates} → 期待値{[f'{p:.2f}' for p in expected_ratings]}")
+            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
+            p_values.append(action_specific_expected_values) # MODIFIED: variable name
+            print(f"dv={dv}: レート{v_rates} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement (var name)
         
         # データの保存とグラフ描画
         results = {
@@ -318,9 +318,9 @@ class ExperimentRunner:
         # 各x値に対して期待値を計算
         for x in x_values:
             n, v_rates = param_generator(x)
-            expected_ratings = evaluate_multi_account_expected_rating(n, v_rates)
-            p_values.append(expected_ratings)
-            print(f"{x_label}={x}: n={n}, v={v_rates} → {[f'{p:.2f}' for p in expected_ratings]}")
+            action_specific_expected_values = get_expected_values_per_action(n, v_rates) # MODIFIED: function call and variable name
+            p_values.append(action_specific_expected_values) # MODIFIED: variable name
+            print(f"{x_label}={x}: n={n}, v={v_rates} → {[f'{p:.2f}' for p in action_specific_expected_values]}") # MODIFIED: print statement (var name)
             
             # 最初の実行で固定パラメータを記録
             if not fixed_params:
