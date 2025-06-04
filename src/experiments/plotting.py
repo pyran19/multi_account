@@ -154,7 +154,7 @@ class ExperimentPlotter:
             ax.set_title(f'アカウント{i+1}', fontsize=14)
             ax.set_xlabel(dataset.get('x_label', 'x'), fontsize=12)
             if i == 0:
-                ax.set_ylabel('期待レート（整数形式）', fontsize=12)
+                ax.set_ylabel('アカウント選択時期待値', fontsize=12)
             
             ax.grid(True, alpha=0.3, linestyle='--')
             
