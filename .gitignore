@@ -176,8 +176,10 @@ cython_debug/
 # エディタ用設定
 *.code-workspace
 *.cursorignore
+.cursor
 
 results/
+data/
 
 *.png
 *.jpg
