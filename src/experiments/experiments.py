@@ -1,8 +1,12 @@
 """
-実験サンプルスクリプト
+本番実験スクリプト
 
-実験モジュールの使用例を示します。
+本番用の実験モジュールの使用例を示します。
+記録に残すための適切なパラメータ設定で実験を実行します。
 整数レート形式を使用：適正レート(1500)を0とし、16ポイント=1として表現
+
+注意: 動作確認には sample_experiments.py を使用してください。
+このファイルは本番用の実験記録のためのスクリプトです。
 """
 
 from src.experiments.experiment_runner import ExperimentRunner
@@ -11,7 +15,7 @@ from src.experiments.plotting import ExperimentPlotter
 
 
 def run_basic_n_p_experiment():
-    """基本的なn-Pプロット実験の例"""
+    """基本的なn-Pプロット実験"""
     print("=== 基本的なn-Pプロット実験 ===\n")
     
     runner = ExperimentRunner()
@@ -32,7 +36,7 @@ def run_basic_n_p_experiment():
 
 
 def run_basic_v0_p_experiment():
-    """基本的なv0-Pプロット実験の例"""
+    """基本的なv0-Pプロット実験"""
     print("\n=== 基本的なv0-Pプロット実験 ===\n")
     
     runner = ExperimentRunner()
@@ -58,7 +62,7 @@ def run_basic_v0_p_experiment():
 
 
 def run_basic_dv_p_experiment():
-    """基本的なdv-Pプロット実験の例"""
+    """基本的なdv-Pプロット実験"""
     print("\n=== 基本的なdv-Pプロット実験 ===\n")
     
     runner = ExperimentRunner()
@@ -68,7 +72,7 @@ def run_basic_dv_p_experiment():
     # 実数換算: 0, 16, 32, 48, 64, 80に相当
     n = 20  # 残り試合数
     v0 = 0  # ベースラインレート（適正レート）
-    r = 3  # アカウント数
+    r = 5  # アカウント数
     
     # 実験実行
     results = runner.run_dv_p_experiment(
@@ -84,14 +88,14 @@ def run_basic_dv_p_experiment():
 
 
 def run_comparison_experiment():
-    """複数条件の比較実験の例"""
+    """複数条件の比較実験"""
     print("\n=== 複数条件の比較実験 ===\n")
     
     data_manager = ExperimentDataManager()
     plotter = ExperimentPlotter()
     runner = ExperimentRunner(data_manager, plotter)
     
-    # 3つの異なるレート分布で比較（整数レート形式、動作確認用に小さい値）
+    # 3つの異なるレート分布で比較（整数レート形式）
     datasets = []
     
     # 条件1: 等間隔分布（降順、差=1）
@@ -101,7 +105,7 @@ def run_comparison_experiment():
     datasets.append({
         'x_values': results1['x_values'],
         'p_values': results1['p_values'],
-        'label': '等間隔分布 (dv=1)',
+        'label': '等間隔分布 (dv=2)',
         'x_label': '残り試合数 n'
     })
     
@@ -209,12 +213,12 @@ def run_custom_experiment_example():
 
 
 if __name__ == "__main__":
-    print("実験サンプルスクリプトを実行します（動作確認用の小さい値）\n")
+    print("本番実験スクリプトを実行します\n")
     print("注意: 整数レート形式を使用しています")
     print("  - 適正レート(1500) = 0")
     print("  - 1勝分(+16) = +1")
     print("  - 1敗分(-16) = -1")
-    print("  - 動作確認のため、n≈20、レート差=1で実行\n")
+    print("  - 本番用パラメータで実行中...\n")
     
     # 各実験を順番に実行
     # コメントアウトして必要な実験のみ実行することも可能
