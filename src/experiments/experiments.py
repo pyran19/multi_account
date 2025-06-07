@@ -20,9 +20,9 @@ def run_basic_n_p_experiment():
     
     runner = ExperimentRunner()
     
-    # パラメータ設定（整数レート形式、動作確認用に小さい値）
-    n_values = [1,2,3,4]+list(range(5, 61, 5))  # n = 5, 10, 15, 20, 25
-    v_rates = [6, 4, 2, 0]  # 整数レート：隣り合うレートの差=1
+    # パラメータ設定（整数レート形式）
+    n_values = [1,2,3,4]+list(range(5, 61, 5))  
+    v_rates = [6, 4, 2, 0]  # 整数レート：隣り合うレートの差=2
     
     # 実験実行
     results = runner.run_n_p_experiment(
@@ -42,11 +42,10 @@ def run_basic_v0_p_experiment():
     runner = ExperimentRunner()
     
     # パラメータ設定（整数レート形式、動作確認用に小さい値）
-    v0_values = list(range(-3, 4, 1))  # v0 = -3, -2, -1, 0, 1, 2, 3
-    # 実数換算: 1452, 1468, 1484, 1500, 1516, 1532, 1548に相当
+    v0_values = list(range(0, 15, 1))  # v0 = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
     n = 20  # 残り試合数
-    dv = 1  # レート差（整数形式、実数では16に相当）
-    r = 3  # アカウント数
+    dv = 2  # レート差（整数形式、実数では16に相当）
+    r = 4  # アカウント数
     
     # 実験実行
     results = runner.run_v0_p_experiment(
@@ -71,8 +70,8 @@ def run_basic_dv_p_experiment():
     dv_values = list(range(0, 6, 1))  # dv = 0, 1, 2, 3, 4, 5
     # 実数換算: 0, 16, 32, 48, 64, 80に相当
     n = 20  # 残り試合数
-    v0 = 0  # ベースラインレート（適正レート）
-    r = 5  # アカウント数
+    v0 = 6  # ベースラインレート（適正レート）
+    r = 4  # アカウント数
     
     # 実験実行
     results = runner.run_dv_p_experiment(

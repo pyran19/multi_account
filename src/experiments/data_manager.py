@@ -70,9 +70,9 @@ class ExperimentDataManager:
         filename = self.generate_filename("xp", "csv")
         filepath = self.csv_dir / filename
         
-        # CSVヘッダーの作成（n, v1, P1, P2, P3, ...の順序）
+        # CSVヘッダーの作成（x, v1, P1, P2, P3, ..., Pmaxの順序）
         account_count = len(p_values[0]) if p_values else 0
-        headers = [x_label, "v1"] + [f"P{i+1}" for i in range(account_count)]
+        headers = [x_label, "v1"] + [f"P{i+1}" for i in range(account_count)] + ["Pmax"]
         
         # データの書き込み
         with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
@@ -80,8 +80,10 @@ class ExperimentDataManager:
             writer.writerow(headers)
             
             for x, v1, p_row in zip(x_values, v1_values, p_values):
-                # x, v1, 期待値の順で保存
-                row = [x, v1] + p_row
+                # 各行のPmax（期待値の最大値）を計算
+                p_max = max(p_row)
+                # x, v1, 期待値, Pmaxの順で保存
+                row = [x, v1] + p_row + [p_max]
                 writer.writerow(row)
         
         return str(filepath)
@@ -136,7 +138,7 @@ class ExperimentDataManager:
         
         return config
     
-    def load_xp_data(self, csv_filename: str) -> tuple[List[float], List[List[float]], List[float], str]:
+    def load_xp_data(self, csv_filename: str) -> tuple[List[float], List[List[float]], List[float], List[float], str]:
         """
         保存されたx-Pプロットデータを読み込む
         
@@ -144,13 +146,14 @@ class ExperimentDataManager:
             csv_filename: CSVファイル名
             
         Returns:
-            (x_values, p_values, v1_values, x_label) のタプル
+            (x_values, p_values, v1_values, pmax_values, x_label) のタプル
         """
         filepath = self.csv_dir / csv_filename
         
         x_values = []
         p_values = []
         v1_values = []
+        pmax_values = []
         x_label = "x"
         
         with open(filepath, 'r', encoding='utf-8') as csvfile:
@@ -161,10 +164,12 @@ class ExperimentDataManager:
             for row in reader:
                 x_values.append(float(row[0]))
                 v1_values.append(float(row[1]))  # v1列の値
-                # P1, P2, P3, ...の期待値（v1列の後から）
-                p_values.append([float(val) for val in row[2:]])
+                # P1, P2, P3, ...の期待値（v1列の後から、Pmax列の前まで）
+                p_values.append([float(val) for val in row[2:-1]])
+                # Pmax列の値（最後の列）
+                pmax_values.append(float(row[-1]))
         
-        return x_values, p_values, v1_values, x_label
+        return x_values, p_values, v1_values, pmax_values, x_label
     
     def load_experiment_config(self, config_filename: str) -> Dict[str, Any]:
         """

@@ -50,7 +50,8 @@ class ExperimentRunner:
     
     def run_n_p_experiment(self, n_values: List[int], v_rates: List[int],
                           experiment_name: Optional[str] = None,
-                          save_results: bool = True) -> Dict[str, Any]:
+                          save_results: bool = True,
+                          show_cutoff_line: bool = False) -> Dict[str, Any]:
         """
         n-Pプロット実験を実行
         
@@ -59,6 +60,7 @@ class ExperimentRunner:
             v_rates: 各アカウントのレート配列
             experiment_name: 実験名（Noneの場合は自動生成）
             save_results: 結果を保存するか
+            show_cutoff_line: 打ち切り基準線（v1-Pmax）を表示するか
             
         Returns:
             実験結果の辞書
@@ -83,11 +85,15 @@ class ExperimentRunner:
             
             print(f"n={n}: レート{sorted_v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
+        # Pmax値を計算（各行の期待値の最大値）
+        pmax_values = [max(p_row) for p_row in p_values]
+        
         # データの保存とグラフ描画
         results = {
             'x_values': n_values,
             'p_values': p_values,
             'v1_values': v1_values,
+            'pmax_values': pmax_values,
             'x_label': '残り試合数 n',
             'x_type': 'n',
             'fixed_params': {'v_rates': v_rates}
@@ -105,10 +111,11 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                n_values, p_values, v1_values,
+                n_values, p_values, v1_values, pmax_values,
                 x_label='残り試合数 n',
                 title='n-P プロット（期待値差分）',
-                save_path=str(graph_path)
+                save_path=str(graph_path),
+                show_cutoff_line=show_cutoff_line
             )
             
             # 設定ファイルの作成と保存
@@ -136,7 +143,8 @@ class ExperimentRunner:
     
     def run_v0_p_experiment(self, v0_values: List[int], n: int, dv: int, r: int,
                            experiment_name: Optional[str] = None,
-                           save_results: bool = True) -> Dict[str, Any]:
+                           save_results: bool = True,
+                           show_cutoff_line: bool = False) -> Dict[str, Any]:
         """
         v0-Pプロット実験を実行
         
@@ -147,6 +155,7 @@ class ExperimentRunner:
             r: アカウント数
             experiment_name: 実験名
             save_results: 結果を保存するか
+            show_cutoff_line: 打ち切り基準線（v1-Pmax）を表示するか
             
         Returns:
             実験結果の辞書
@@ -172,11 +181,15 @@ class ExperimentRunner:
             
             print(f"v0={v0}: レート{v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
+        # Pmax値を計算（各行の期待値の最大値）
+        pmax_values = [max(p_row) for p_row in p_values]
+        
         # データの保存とグラフ描画
         results = {
             'x_values': v0_values,
             'p_values': p_values,
             'v1_values': v1_values,
+            'pmax_values': pmax_values,
             'x_label': 'ベースラインレート v0',
             'x_type': 'v0',
             'fixed_params': {'n': n, 'dv': dv, 'r': r}
@@ -194,10 +207,11 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                v0_values, p_values, v1_values,
+                v0_values, p_values, v1_values, pmax_values,
                 x_label='ベースラインレート v0',
                 title='v0-P プロット（期待値差分）',
-                save_path=str(graph_path)
+                save_path=str(graph_path),
+                show_cutoff_line=show_cutoff_line
             )
             
             # 設定ファイルの作成と保存
@@ -225,7 +239,8 @@ class ExperimentRunner:
     
     def run_dv_p_experiment(self, dv_values: List[int], n: int, v0: int, r: int,
                            experiment_name: Optional[str] = None,
-                           save_results: bool = True) -> Dict[str, Any]:
+                           save_results: bool = True,
+                           show_cutoff_line: bool = False) -> Dict[str, Any]:
         """
         dv-Pプロット実験を実行
         
@@ -236,6 +251,7 @@ class ExperimentRunner:
             r: アカウント数
             experiment_name: 実験名
             save_results: 結果を保存するか
+            show_cutoff_line: 打ち切り基準線（v1-Pmax）を表示するか
             
         Returns:
             実験結果の辞書
@@ -261,11 +277,15 @@ class ExperimentRunner:
             
             print(f"dv={dv}: レート{v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
+        # Pmax値を計算（各行の期待値の最大値）
+        pmax_values = [max(p_row) for p_row in p_values]
+        
         # データの保存とグラフ描画
         results = {
             'x_values': dv_values,
             'p_values': p_values,
             'v1_values': v1_values,
+            'pmax_values': pmax_values,
             'x_label': 'レート差 dv',
             'x_type': 'dv',
             'fixed_params': {'n': n, 'v0': v0, 'r': r}
@@ -283,10 +303,11 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                dv_values, p_values, v1_values,
+                dv_values, p_values, v1_values, pmax_values,
                 x_label='レート差 dv',
                 title='dv-P プロット（期待値差分）',
-                save_path=str(graph_path)
+                save_path=str(graph_path),
+                show_cutoff_line=show_cutoff_line
             )
             
             # 設定ファイルの作成と保存
@@ -317,7 +338,8 @@ class ExperimentRunner:
                             x_label: str = "x",
                             x_type: str = "custom",
                             experiment_name: Optional[str] = None,
-                            save_results: bool = True) -> Dict[str, Any]:
+                            save_results: bool = True,
+                            show_cutoff_line: bool = False) -> Dict[str, Any]:
         """
         カスタム実験を実行
         
@@ -328,6 +350,7 @@ class ExperimentRunner:
             x_type: xの種類
             experiment_name: 実験名
             save_results: 結果を保存するか
+            show_cutoff_line: 打ち切り基準線（v1-Pmax）を表示するか
             
         Returns:
             実験結果の辞書
@@ -357,11 +380,15 @@ class ExperimentRunner:
                 fixed_params['sample_n'] = n
                 fixed_params['sample_v_rates'] = sorted_v_rates
         
+        # Pmax値を計算（各行の期待値の最大値）
+        pmax_values = [max(p_row) for p_row in p_values]
+        
         # データの保存とグラフ描画
         results = {
             'x_values': x_values,
             'p_values': p_values,
             'v1_values': v1_values,
+            'pmax_values': pmax_values,
             'x_label': x_label,
             'x_type': x_type,
             'fixed_params': fixed_params
@@ -378,10 +405,11 @@ class ExperimentRunner:
             graph_path = self.data_manager.graph_dir / graph_filename
             
             fig = self.plotter.plot_xp(
-                x_values, p_values, v1_values,
+                x_values, p_values, v1_values, pmax_values,
                 x_label=x_label,
                 title=f'{x_label}-P プロット（期待値差分）',
-                save_path=str(graph_path)
+                save_path=str(graph_path),
+                show_cutoff_line=show_cutoff_line
             )
             
             config = self.data_manager.create_xp_config(

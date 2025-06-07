@@ -25,7 +25,8 @@ def run_basic_n_p_experiment():
     results = runner.run_n_p_experiment(
         n_values=n_values,
         v_rates=v_rates,
-        experiment_name="basic_n_p_experiment"
+        experiment_name="basic_n_p_experiment",
+        show_cutoff_line=True
     )
     
     print("\n実験完了！")
@@ -210,6 +211,7 @@ def run_custom_experiment_example():
 
 
 if __name__ == "__main__":
+    import time
     print("実験サンプルスクリプトを実行します（動作確認用の小さい値）\n")
     print("注意: 整数レート形式を使用しています")
     print("  - 適正レート(1500) = 0")
@@ -224,7 +226,9 @@ if __name__ == "__main__":
     run_basic_n_p_experiment()
     
     # 2. 基本的なv0-Pプロット
+    time.sleep(1)
     run_basic_v0_p_experiment()
+    time.sleep(1)
     
     # 3. 基本的なdv-Pプロット  
     run_basic_dv_p_experiment()
@@ -236,6 +240,6 @@ if __name__ == "__main__":
     run_custom_experiment_example()
     
     # 6. 保存データの読み込み
-    load_and_plot_experiment()
+    #load_and_plot_experiment()
     
     print("\n全ての実験が完了しました！") 
