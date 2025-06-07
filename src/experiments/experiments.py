@@ -17,9 +17,8 @@ def run_basic_n_p_experiment():
     runner = ExperimentRunner()
     
     # パラメータ設定（整数レート形式、動作確認用に小さい値）
-    n_values = list(range(5, 26, 5))  # n = 5, 10, 15, 20, 25
-    v_rates = [0, 1, 2, 3]  # 整数レート：隣り合うレートの差=1
-    # 実数換算: [1500, 1516, 1532, 1548]に相当
+    n_values = [1,2,3,4]+list(range(5, 61, 5))  # n = 5, 10, 15, 20, 25
+    v_rates = [6, 4, 2, 0]  # 整数レート：隣り合うレートの差=1
     
     # 実験実行
     results = runner.run_n_p_experiment(
@@ -224,18 +223,18 @@ if __name__ == "__main__":
     run_basic_n_p_experiment()
     
     # 2. 基本的なv0-Pプロット
-    run_basic_v0_p_experiment()
+    #run_basic_v0_p_experiment()
     
     # 3. 基本的なdv-Pプロット  
-    run_basic_dv_p_experiment()
+    #run_basic_dv_p_experiment()
     
     # 4. 複数条件の比較
-    run_comparison_experiment()
+    #run_comparison_experiment()
     
     # 5. カスタム実験
-    run_custom_experiment_example()
+    #run_custom_experiment_example()
     
     # 6. 保存データの読み込み
-    load_and_plot_experiment()
+    #load_and_plot_experiment()
     
     print("\n全ての実験が完了しました！") 

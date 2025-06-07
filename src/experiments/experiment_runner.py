@@ -35,17 +35,18 @@ class ExperimentRunner:
     
     def generate_equal_interval_rates(self, v0: int, dv: int, r: int) -> List[int]:
         """
-        等間隔のレート配列を生成
+        等間隔のレート配列を生成（降順）
+        実験計画書の仕様に従い、v₁=v₀, v₂=v₀-dv, v₃=v₀-2dv, ..., vᵣ=v₀-(r-1)dv
         
         Args:
-            v0: ベースラインレート
+            v0: ベースラインレート（最大レート）
             dv: レート差
             r: アカウント数
             
         Returns:
-            レート配列
+            降順のレート配列
         """
-        return [v0 + i * dv for i in range(r)]
+        return [v0 - i * dv for i in range(r)]
     
     def run_n_p_experiment(self, n_values: List[int], v_rates: List[int],
                           experiment_name: Optional[str] = None,
@@ -72,7 +73,7 @@ class ExperimentRunner:
         
         # 各n値に対して期待値を計算
         for n in n_values:
-            # レート配列をソート（降順）して最大レートを取得
+            # レート配列が降順になっているかチェックしてソート
             sorted_v_rates = sorted(v_rates, reverse=True)
             v1 = sorted_v_rates[0]  # 最大レート
             
@@ -80,7 +81,7 @@ class ExperimentRunner:
             p_values.append(action_specific_expected_values)
             v1_values.append(v1)
             
-            print(f"n={n}: v1={v1}, Action EVs {[f'{p:.2f}' for p in action_specific_expected_values]}")
+            print(f"n={n}: レート{sorted_v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
         # データの保存とグラフ描画
         results = {
@@ -162,15 +163,14 @@ class ExperimentRunner:
         # 各v0値に対して期待値を計算
         for v0 in v0_values:
             v_rates = self.generate_equal_interval_rates(v0, dv, r)
-            # レート配列をソート（降順）して最大レートを取得
-            sorted_v_rates = sorted(v_rates, reverse=True)
-            v1 = sorted_v_rates[0]  # 最大レート
+            # 生成したレート配列は既に降順になっている
+            v1 = v_rates[0]  # 最大レート（v0と同じ）
             
-            action_specific_expected_values = get_expected_values_per_action(n, sorted_v_rates)
+            action_specific_expected_values = get_expected_values_per_action(n, v_rates)
             p_values.append(action_specific_expected_values)
             v1_values.append(v1)
             
-            print(f"v0={v0}: レート{sorted_v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
+            print(f"v0={v0}: レート{v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
         # データの保存とグラフ描画
         results = {
@@ -252,15 +252,14 @@ class ExperimentRunner:
         # 各dv値に対して期待値を計算
         for dv in dv_values:
             v_rates = self.generate_equal_interval_rates(v0, dv, r)
-            # レート配列をソート（降順）して最大レートを取得
-            sorted_v_rates = sorted(v_rates, reverse=True)
-            v1 = sorted_v_rates[0]  # 最大レート
+            # 生成したレート配列は既に降順になっている
+            v1 = v_rates[0]  # 最大レート（v0と同じ）
             
-            action_specific_expected_values = get_expected_values_per_action(n, sorted_v_rates)
+            action_specific_expected_values = get_expected_values_per_action(n, v_rates)
             p_values.append(action_specific_expected_values)
             v1_values.append(v1)
             
-            print(f"dv={dv}: レート{sorted_v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
+            print(f"dv={dv}: レート{v_rates}, v1={v1} → 期待値{[f'{p:.2f}' for p in action_specific_expected_values]}")
         
         # データの保存とグラフ描画
         results = {
@@ -343,7 +342,7 @@ class ExperimentRunner:
         # 各x値に対して期待値を計算
         for x in x_values:
             n, v_rates = param_generator(x)
-            # レート配列をソート（降順）して最大レートを取得
+            # レート配列が降順になっているかチェックしてソート
             sorted_v_rates = sorted(v_rates, reverse=True)
             v1 = sorted_v_rates[0]  # 最大レート
             
