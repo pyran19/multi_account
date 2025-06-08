@@ -432,4 +432,97 @@ class ExperimentRunner:
             print(f"  グラフ: {graph_filename}")
             print(f"  設定: {config_name}.json")
         
+        return results
+    
+    def run_n_v_expectation_experiment(self, n_values: List[int], v_rate_lists: List[List[int]],
+                                     experiment_name: Optional[str] = None,
+                                     save_results: bool = True) -> Dict[str, Any]:
+        """
+        n-v期待値実験を実行（複数アカウントのレート列について、nを横軸として期待値をプロット）
+        
+        Args:
+            n_values: 残り試合数nの値リスト
+            v_rate_lists: 複数アカウントのレート列のリスト（例：[[1500,1400,1300], [1600,1500,1400]]）
+            experiment_name: 実験名（Noneの場合は自動生成）
+            save_results: 結果を保存するか
+            
+        Returns:
+            実験結果の辞書
+        """
+        print(f"n-v期待値実験を開始します...")
+        print(f"レート列の候補: {v_rate_lists}")
+        print(f"n値の範囲: {min(n_values)} - {max(n_values)}")
+        
+        # 各レート列について、n値ごとの期待値を計算
+        expectation_data = {}
+        rate_labels = []  # 凡例用のラベル
+        
+        for i, v_rates in enumerate(v_rate_lists):
+            # レート列を降順にソート
+            sorted_v_rates = sorted(v_rates, reverse=True)
+            rate_label = f"({','.join(map(str, sorted_v_rates))})"
+            rate_labels.append(rate_label)
+            
+            expectations = []
+            print(f"\nレート列{rate_label}の計算中...")
+            
+            for n in n_values:
+                # 複数アカウントの期待値を計算し、最適行動の期待値（Pmax）を取得
+                action_specific_expected_values = get_expected_values_per_action(n, sorted_v_rates)
+                expectation = max(action_specific_expected_values)  # 最適行動の期待値
+                expectations.append(expectation)
+                
+                print(f"  n={n}: P(n,v)={expectation:.2f}")
+            
+            expectation_data[rate_label] = expectations
+        
+        # 結果をまとめる
+        results = {
+            'n_values': n_values,
+            'v_rate_lists': v_rate_lists,
+            'rate_labels': rate_labels,
+            'expectation_data': expectation_data,
+            'experiment_type': 'n_v_expectation'
+        }
+        
+        if save_results:
+            # CSVファイルの保存
+            csv_path = self.data_manager.save_n_v_expectation_data(
+                n_values, rate_labels, expectation_data
+            )
+            csv_filename = Path(csv_path).name
+            
+            # グラフの生成と保存
+            graph_filename = self.data_manager.generate_filename("n_v_expectation", "png")
+            graph_path = self.data_manager.graph_dir / graph_filename
+            
+            fig = self.plotter.plot_n_v_expectation(
+                n_values, rate_labels, expectation_data,
+                title='n-v 期待値プロット（複数アカウント）',
+                save_path=str(graph_path)
+            )
+            
+            # 設定ファイルの作成と保存
+            config = {
+                'experiment_type': 'n_v_expectation',
+                'csv_filename': csv_filename,
+                'graph_filename': graph_filename,
+                'n_values': n_values,
+                'v_rate_lists': v_rate_lists,
+                'rate_labels': rate_labels,
+                'created_at': self.data_manager.get_timestamp()
+            }
+            
+            config_name = experiment_name or f"n_v_expectation_experiment_{self.data_manager.generate_filename('', '')[:-1]}"
+            config_path = self.data_manager.save_experiment_config(config_name, config)
+            
+            results['csv_path'] = csv_path
+            results['graph_path'] = str(graph_path)
+            results['config_path'] = config_path
+            
+            print(f"\n結果を保存しました:")
+            print(f"  CSV: {csv_filename}")
+            print(f"  グラフ: {graph_filename}")
+            print(f"  設定: {config_name}.json")
+        
         return results 

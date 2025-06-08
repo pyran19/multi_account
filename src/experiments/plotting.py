@@ -5,6 +5,8 @@ x-Pプロットの描画機能を提供します。
 各アカウントは異なる色で表示され、見やすいグラフを生成します。
 """
 
+import matplotlib
+matplotlib.use('Agg')  # GUI不要のバックエンドを使用
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -228,6 +230,71 @@ class ExperimentPlotter:
         
         plt.tight_layout()
         
+        if save_path:
+            fig.savefig(save_path, dpi=300, bbox_inches='tight')
+        
+        return fig
+    
+    def plot_n_v_expectation(self, n_values: List[int], rate_labels: List[str],
+                           expectation_data: Dict[str, List[float]],
+                           title: Optional[str] = None,
+                           save_path: Optional[str] = None,
+                           figsize: Tuple[int, int] = (10, 6),
+                           show_grid: bool = True,
+                           show_legend: bool = True,
+                           line_style: str = '-o') -> plt.Figure:
+        """
+        n-v期待値プロットを描画（各レート列についてnを横軸として期待値をプロット）
+        
+        Args:
+            n_values: 残り試合数nの値のリスト
+            rate_labels: レート列のラベルのリスト（例：["(1500,1400,1300)", "(1600,1500,1400)"]）
+            expectation_data: 各レート列に対する期待値のリスト（辞書形式：{label: [期待値リスト]}）
+            title: グラフのタイトル
+            save_path: 保存先のパス（Noneの場合は保存しない）
+            figsize: 図のサイズ
+            show_grid: グリッドを表示するか
+            show_legend: 凡例を表示するか
+            line_style: 線のスタイル
+            
+        Returns:
+            作成したFigureオブジェクト
+        """
+        fig, ax = plt.subplots(figsize=figsize)
+        
+        # 各レート列についてプロット
+        for i, label in enumerate(rate_labels):
+            expectations = expectation_data[label]
+            color = self.colors[i % len(self.colors)]
+            
+            ax.plot(n_values, expectations, line_style,
+                   color=color,
+                   label=label,
+                   markersize=6,
+                   linewidth=2,
+                   alpha=0.8)
+        
+        # 軸ラベルとタイトルの設定
+        ax.set_xlabel('残り試合数 n', fontsize=14)
+        ax.set_ylabel('期待レート P(n,v)', fontsize=14)
+        
+        if title:
+            ax.set_title(title, fontsize=16, pad=20)
+        else:
+            ax.set_title('n-v 期待値プロット', fontsize=16, pad=20)
+        
+        # グリッドの表示
+        if show_grid:
+            ax.grid(True, alpha=0.3, linestyle='--')
+        
+        # 凡例の表示
+        if show_legend:
+            ax.legend(loc='best', framealpha=0.9)
+        
+        # レイアウトの調整
+        plt.tight_layout()
+        
+        # ファイルへの保存
         if save_path:
             fig.savefig(save_path, dpi=300, bbox_inches='tight')
         

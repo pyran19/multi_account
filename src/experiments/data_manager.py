@@ -88,6 +88,47 @@ class ExperimentDataManager:
         
         return str(filepath)
     
+    def save_n_v_expectation_data(self, n_values: List[int], rate_labels: List[str], 
+                                 expectation_data: Dict[str, List[float]]) -> str:
+        """
+        n-v期待値データをCSV形式で保存する
+        
+        Args:
+            n_values: 残り試合数nの値のリスト
+            rate_labels: レート列のラベルのリスト（例：["(1500,1400,1300)", "(1600,1500,1400)"]）
+            expectation_data: 各レート列に対する期待値のリスト（辞書形式：{label: [期待値リスト]}）
+            
+        Returns:
+            保存したファイルのパス
+        """
+        filename = self.generate_filename("n_v_expectation", "csv")
+        filepath = self.csv_dir / filename
+        
+        # CSVヘッダーの作成（n, label1, label2, label3, ...の順序）
+        headers = ["n"] + rate_labels
+        
+        # データの書き込み
+        with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(headers)
+            
+            for i, n in enumerate(n_values):
+                row = [n]
+                for label in rate_labels:
+                    row.append(expectation_data[label][i])
+                writer.writerow(row)
+        
+        return str(filepath)
+    
+    def get_timestamp(self) -> str:
+        """
+        現在時刻のタイムスタンプを取得
+        
+        Returns:
+            ISO形式のタイムスタンプ文字列
+        """
+        return datetime.now().isoformat()
+    
     def save_experiment_config(self, config_name: str, config_data: Dict[str, Any]) -> str:
         """
         実験設定をJSON形式で保存

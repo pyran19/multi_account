@@ -210,6 +210,47 @@ def run_custom_experiment_example():
     return results
 
 
+def run_n_v_expectation_experiment_example():
+    """複数アカウントのn-v期待値実験の例"""
+    print("\n=== 複数アカウントのn-v期待値実験 ===\n")
+    
+    runner = ExperimentRunner()
+    
+    # パラメータ設定（整数レート形式、動作確認用に小さい値）
+    n_values = list(range(5, 26, 5))  # n = 5, 10, 15, 20, 25
+    
+    # 複数のレート列パターンを定義（整数レート形式、降順）
+    v_rate_lists = [
+        [2, 1, 0],    # 高レート帯: 実数換算 [1532, 1516, 1500]
+        [1, 0, -1],   # 中レート帯: 実数換算 [1516, 1500, 1484]  
+        [0, -1, -2],  # 低レート帯: 実数換算 [1500, 1484, 1468]
+        [3, 0, -2],   # 大きなレート差: 実数換算 [1548, 1500, 1468]
+        [0, 0, 0],    # 同一レート（比較用）: 実数換算 [1500, 1500, 1500]
+    ]
+    
+    print("実験設定（整数レート形式）:")
+    print(f"  残り試合数の範囲: {min(n_values)} - {max(n_values)}")
+    print("  レート列の候補:")
+    for i, rates in enumerate(v_rate_lists):
+        # 実数レートでの表示も追加
+        real_rates = [1500 + r * 16 for r in rates]
+        print(f"    {i+1}. {rates} (実数: {real_rates})")
+    
+    # 実験実行
+    results = runner.run_n_v_expectation_experiment(
+        n_values=n_values,
+        v_rate_lists=v_rate_lists,
+        experiment_name="n_v_expectation_experiment"
+    )
+    
+    print("\n実験完了！")
+    print("結果の概要:")
+    print("  各レート列について、nを横軸として最適行動の期待値をプロット")
+    print("  凡例にはレート列が (v1,v2,v3) 形式で表示されます")
+    
+    return results
+
+
 if __name__ == "__main__":
     import time
     print("実験サンプルスクリプトを実行します（動作確認用の小さい値）\n")
@@ -239,7 +280,11 @@ if __name__ == "__main__":
     # 5. カスタム実験
     run_custom_experiment_example()
     
-    # 6. 保存データの読み込み
+    # 6. 複数アカウントのn-v期待値実験
+    time.sleep(1)
+    run_n_v_expectation_experiment_example()
+    
+    # 7. 保存データの読み込み
     #load_and_plot_experiment()
     
     print("\n全ての実験が完了しました！") 
